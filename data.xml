@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="CGImap 0.8.3 (4139264 spike-07.openstreetmap.org)" copyright="OpenStreetMap and contributors" attribution="http://www.openstreetmap.org/copyright" license="http://opendatacommons.org/licenses/odbl/1-0/">
+ <bounds minlat="38.9562200" minlon="20.7545600" maxlat="38.9563600" maxlon="20.7547800"/>
+ <node id="5938294027" visible="true" version="1" changeset="63029859" timestamp="2018-09-29T07:48:34Z" user="Αντρέ" uid="1748423" lat="38.9563304" lon="20.7545920"/>
+ <node id="5938294028" visible="true" version="1" changeset="63029859" timestamp="2018-09-29T07:48:34Z" user="Αντρέ" uid="1748423" lat="38.9563367" lon="20.7547476"/>
+ <node id="5938294029" visible="true" version="1" changeset="63029859" timestamp="2018-09-29T07:48:34Z" user="Αντρέ" uid="1748423" lat="38.9562470" lon="20.7547422"/>
+ <node id="5938294030" visible="true" version="1" changeset="63029859" timestamp="2018-09-29T07:48:34Z" user="Αντρέ" uid="1748423" lat="38.9562428" lon="20.7545840"/>
+ <way id="628959859" visible="true" version="1" changeset="63029859" timestamp="2018-09-29T07:48:34Z" user="Αντρέ" uid="1748423">
+  <nd ref="5938294027"/>
+  <nd ref="5938294028"/>
+  <nd ref="5938294029"/>
+  <nd ref="5938294030"/>
+  <nd ref="5938294027"/>
+  <tag k="addr:city" v="Δήμος Πρέβεζας"/>
+  <tag k="addr:housenumber" v="15"/>
+  <tag k="addr:street" v="Ελ. Βενιζέλου"/>
+  <tag k="building" v="yes"/>
+  <tag k="name" v="Εργατικό Κέντρο Πρέβεζας"/>
+ </way>
+</osm>
