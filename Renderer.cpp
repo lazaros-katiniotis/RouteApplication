@@ -7,9 +7,9 @@
 using namespace std;
 using namespace std::experimental::io2d;
 
-//static float RoadMetricWidth(Model::Road::Type type);
-//static io2d::rgba_color RoadColor(Model::Road::Type type);
-//static io2d::dashes RoadDashes(Model::Road::Type type);
+static float RoadMetricWidth(Model::Road::Type type);
+static rgba_color RoadColor(Model::Road::Type type);
+static dashes RoadDashes(Model::Road::Type type);
 static point_2d ToPoint2D(const Model::Node& node) noexcept;
 namespace route_app {
     Renderer::Renderer(Model *model) {
@@ -18,7 +18,8 @@ namespace route_app {
     }
 
     void Renderer::Initialize() {
-
+        BuildRoadReps();
+        //BuildLanduseBrushes();
     }
 
     //void Renderer::InitializeWindow(int width, int height) {
@@ -42,6 +43,41 @@ namespace route_app {
             surface.fill(building_fill_brush_, path);
             surface.stroke(building_outline_brush_, path, std::nullopt, building_outline_stroke_props_);
         }
+    }
+
+    void Renderer::DrawHighways(output_surface& surface) const
+    {
+        auto ways = model_->GetWays().data();
+        for (auto road : model_->GetRoads()) {
+            if (auto rep_it = road_reps_.find(road.type); rep_it != road_reps_.end()) {
+                auto& rep = rep_it->second;
+                auto& way = ways[road.way];
+                auto width = rep.metric_width > 0.f ? (rep.metric_width * pixels_in_meters_) : 1.f;
+                cout << width << endl;
+                auto sp = stroke_props{ width, line_cap::round };
+                auto path = PathFromWay(way);
+                surface.stroke(rep.brush, path, std::nullopt, sp, rep.dashes);
+            }
+        }
+    }
+
+    interpreted_path Renderer::PathFromWay(const Model::Way& way) const {
+        cout << "Creating path from way " << &way << endl;
+        if (way.nodes.empty()) {
+            cout << "way is empty" << endl;
+            return {};
+        }
+
+        const auto nodes = model_->GetNodes().data();
+
+        auto pb = path_builder{};
+        pb.matrix(matrix_);
+        pb.new_figure(ToPoint2D(nodes[way.nodes.front()]));
+        for (auto it = ++way.nodes.begin(); it != std::end(way.nodes); ++it) {
+            cout << &nodes[*it] << endl;
+            pb.line(ToPoint2D(nodes[*it]));
+        }
+        return interpreted_path{ pb };
     }
 
     interpreted_path Renderer::PathFromMP(const Model::Multipolygon& mp) const {
@@ -79,10 +115,12 @@ namespace route_app {
         //cout << "scale_: " << scale_ << endl;
         pixels_in_meters_ = static_cast<float>(scale_ / model_->GetMetricScale());
         //cout << "pixels_in_meters_: " << pixels_in_meters_ << endl;
-        matrix_ = matrix_2d::create_scale({ scale_, -scale_ }) *
-            matrix_2d::create_translate({ 0.f, static_cast<float>(surface.dimensions().y()) });
-        //surface.paint(background_fill_brush_);
-        surface.paint(mainColor);
+        matrix_ =   matrix_2d::create_scale({ scale_, -scale_ }) *
+                    matrix_2d::create_translate({ 0.f, static_cast<float>(surface.dimensions().y()) });
+        
+        surface.paint(background_fill_brush_);
+        //surface.paint(mainColor);
+        DrawHighways(surface);
         DrawBuildings(surface);
     }
 
@@ -93,6 +131,56 @@ namespace route_app {
     Renderer::~Renderer() {
         Release();
     }
+
+    void Renderer::BuildRoadReps()
+    {
+        using R = Model::Road;
+        auto types = { R::Motorway, R::Trunk, R::Primary,  R::Secondary, R::Tertiary,
+            R::Residential, R::Service, R::Unclassified, R::Footway };
+        for (auto type : types) {
+            auto& rep = road_reps_[type];
+            rep.brush = brush{ RoadColor(type) };
+            rep.metric_width = RoadMetricWidth(type);
+            rep.dashes = RoadDashes(type);
+        }
+    }
+}
+
+static float RoadMetricWidth(Model::Road::Type type)
+{
+    switch (type) {
+    case Model::Road::Motorway:     return 6.f;
+    case Model::Road::Trunk:        return 6.f;
+    case Model::Road::Primary:      return 5.f;
+    case Model::Road::Secondary:    return 5.f;
+    case Model::Road::Tertiary:     return 4.f;
+    case Model::Road::Residential:  return 2.5f;
+    case Model::Road::Unclassified: return 2.5f;
+    case Model::Road::Service:      return 1.f;
+    case Model::Road::Footway:      return 0.f;
+    default:                        return 1.f;
+    }
+}
+
+static rgba_color RoadColor(Model::Road::Type type)
+{
+    switch (type) {
+    case Model::Road::Motorway:     return rgba_color{ 226, 122, 143 };
+    case Model::Road::Trunk:        return rgba_color{ 245, 161, 136 };
+    case Model::Road::Primary:      return rgba_color{ 249, 207, 144 };
+    case Model::Road::Secondary:    return rgba_color{ 244, 251, 173 };
+    case Model::Road::Tertiary:     return rgba_color{ 244, 251, 173 };
+    case Model::Road::Residential:  return rgba_color{ 254, 254, 254 };
+    case Model::Road::Service:      return rgba_color{ 254, 254, 254 };
+    case Model::Road::Footway:      return rgba_color{ 241, 106, 96 };
+    case Model::Road::Unclassified: return rgba_color{ 254, 254, 254 };
+    default:                        return rgba_color::grey;
+    }
+}
+
+static dashes RoadDashes(Model::Road::Type type)
+{
+    return type == Model::Road::Footway ? dashes{ 0.f, {1.f, 2.f} } : dashes{};
 }
 
 static point_2d ToPoint2D(const Model::Node& node) noexcept {

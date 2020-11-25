@@ -142,10 +142,10 @@ int main(int argc, char** argv) {
     //maxLong = "20.74000";
     //maxLat = "38.95866";
 
-    minLong = "17.95977";
-    minLat = "59.28412";
-    maxLong = "17.96303";
-    maxLat = "59.28502";
+    minLong = "17.96048";
+    minLat = "59.28415";
+    maxLong = "17.96267";
+    maxLat = "59.28519";
     string bounding_box_arguments = minLong + "," + minLat + "," + maxLong + "," + maxLat;
     string bounding_box_query = bounding_box_query_prefix + bounding_box_arguments;
 

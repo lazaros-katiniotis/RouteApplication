@@ -69,6 +69,7 @@ namespace route_app {
         void PrintData();
         double GetMetricScale() { return metric_scale_; }
         auto& GetBuildings() { return buildings_; }
+        auto& GetRoads() { return roads_; }
         const vector<Node>& GetNodes() const noexcept { return nodes_; }
         const vector<Way>& GetWays() const noexcept { return ways_; }
     private:
@@ -81,11 +82,13 @@ namespace route_app {
         unordered_map<string, int> node_id_to_number_;
         unordered_map<string, int> way_id_to_number_;
         vector<Building> buildings_;
+        vector<Road> roads_;
         vector<Node> nodes_;
         vector<Way> ways_;
         void ParseBounds();
         Element* ParseNode(const xml_node& node, int& index);
         void ParseAttributes(const xml_node& node, Element* element, int index);
+        //static Road::Type StringToRoadType(string_view type);
     };
 }
 
