@@ -12,8 +12,8 @@ namespace route_app {
 
     static const string APPLICATION_NAME = "RouteApplication";
 
-    enum class StorageFlags {
-        STRUCT_STORAGE, FILE_STORAGE
+    enum class StorageMethod {
+        MEMORY_STORAGE, FILE_STORAGE
     };
 
     struct QueryData {
@@ -24,11 +24,11 @@ namespace route_app {
 
     struct QueryFile {
         FILE* file;
-        const char* filename;
+        string filename;
     };
 
     struct AppData {
-        StorageFlags sf;
+        StorageMethod sm;
         QueryData* query_data;
         QueryFile* query_file;
     };

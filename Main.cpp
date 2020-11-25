@@ -21,11 +21,12 @@ namespace route_app {
         HTTPHandler *handler_;
         Model *model_;
         Renderer *renderer_;
-        void InitializeAppData(StorageFlags sf);
+        void ParseCommandLineArguments(int argc, char** argv);
+        void InitializeAppData(StorageMethod sm, string filename, const char* file_mode);
         void InitializeHTTPRequestQuery(string url, string api, string arguments);
         void Release();
     public:
-        RouteApplication(StorageFlags sf, string url, string api, string arguments);
+        RouteApplication(int argc, char** argv);
         ~RouteApplication();
         static string GetApplicationName();
         void HTTPRequest();
@@ -35,22 +36,79 @@ namespace route_app {
         void DisplayMap();
     };
 
-    RouteApplication::RouteApplication(StorageFlags sf, string url, string api, string arguments) {
-        PrintDebugMessage(APPLICATION_NAME, "", "Initiating Route Application...", true);
-        InitializeAppData(sf);
-        InitializeHTTPRequestQuery(url, api, arguments);
+    RouteApplication::RouteApplication(int argc, char** argv) {
+        PrintDebugMessage(APPLICATION_NAME, "", "Initiating Route Application...", false);
+        cout << std::setprecision(7);
+        cout << std::fixed;
+        ParseCommandLineArguments(argc, argv);
     }
 
-    void RouteApplication::InitializeAppData(StorageFlags sf) {
+    void RouteApplication::ParseCommandLineArguments(int argc, char** argv) {
+        PrintDebugMessage(APPLICATION_NAME, "", "Parsing arguments from command line...", false);
+        //RouteApplication.exe -b 20.75456,38.95622,20.75478,38.95636 -f test.xml
+        string url = "https://api.openstreetmap.org";
+        string api = "/api/0.6";
+        string osm_bounding_box_query_prefix = "/map?bbox=";
+        route_app::StorageMethod sm = route_app::StorageMethod::MEMORY_STORAGE;
+        string osm_bounding_box_query = "";
+        string osm_data_file;
+        const char* file_mode = "w";
+        bool successfully_parsed_arguments = true;
+        if (argc > 1) {
+            for (int i = 1; i < argc; ++i) {
+                if (string_view{ argv[i] } == "-b") {
+                    int coordinate_count = 0;
+                    while (++i < argc) {
+                        osm_bounding_box_query += argv[i];
+                        if (++coordinate_count != 4) {
+                            osm_bounding_box_query += ",";
+                        }
+                        else {
+                            break;
+                        }
+                    }
+                    if (coordinate_count != 4) {
+                        successfully_parsed_arguments = false;
+                        break;
+                    }
+                    PrintDebugMessage(APPLICATION_NAME, "", "OSM Bounding box found: " + osm_bounding_box_query, false);
+                }
+                else if (string_view{ argv[i] } == "-f") {
+                    sm = StorageMethod::FILE_STORAGE;
+                    if (++i < argc) {
+                        osm_data_file = argv[i];
+                        if (osm_bounding_box_query == "") {
+                            file_mode = "r";
+                        }
+                        PrintDebugMessage(APPLICATION_NAME, "", "OSM data file found: '" + osm_data_file + "'", false);
+                    }
+                    else {
+                        successfully_parsed_arguments = false;
+                        break;
+                    }
+                }
+            }
+        }
+        if (!successfully_parsed_arguments) {
+            cout << "Usage: maps [-b MinLongitude MinLattitude MaxLongitude MaxLattitude] [-f filename.xml]" << std::endl;
+            cout << "Will use the map of Rapperswil: 8.81598,47.22277,8.83,47.23" << std::endl << std::endl;
+            osm_bounding_box_query = "8.81598,47.22277,8.83,47.23";
+        }
+
+        InitializeAppData(sm, osm_data_file, file_mode);
+        InitializeHTTPRequestQuery(url, api, osm_bounding_box_query_prefix + osm_bounding_box_query);
+    }
+
+    void RouteApplication::InitializeAppData(StorageMethod sm, string filename, const char* file_mode) {
         data_ = new AppData();
-        data_->sf = sf;
+        data_->sm = sm;
         errno_t error;
-        switch (data_->sf) {
-            case StorageFlags::FILE_STORAGE:
+        switch (data_->sm) {
+            case StorageMethod::FILE_STORAGE:
                 data_->query_file = new QueryFile();
-                data_->query_file->filename = "data.xml";
+                data_->query_file->filename = filename;
                 _set_errno(0);
-                error = fopen_s(&data_->query_file->file, data_->query_file->filename, "w");
+                error = fopen_s(&data_->query_file->file, data_->query_file->filename.c_str(), file_mode);
                 if (error != 0) {
                     string filename = (data_->query_file->filename);
                     string message = "Error opening file '" + filename + "'.";
@@ -58,7 +116,7 @@ namespace route_app {
                     exit(EXIT_FAILURE);
                 }
                 break;
-            case StorageFlags::STRUCT_STORAGE:
+            case StorageMethod::MEMORY_STORAGE:
                 data_->query_data = new QueryData();
                 data_->query_data->memory = new char(1);
                 data_->query_data->size = 0;
@@ -68,7 +126,7 @@ namespace route_app {
     }
 
     void RouteApplication::InitializeHTTPRequestQuery(string url, string api, string arguments) {
-        PrintDebugMessage(APPLICATION_NAME, "", "Initializing HTTP request query...", false);
+        PrintDebugMessage(APPLICATION_NAME, "", "Initializing HTTP request query...", true);
         handler_ = new HTTPHandler(url, api, arguments);
     }
 
@@ -111,7 +169,7 @@ namespace route_app {
     }
 
     void RouteApplication::Release() {
-        if (data_->sf == StorageFlags::STRUCT_STORAGE) {
+        if (data_->sm == StorageMethod::MEMORY_STORAGE) {
             delete data_->query_data->memory;
             delete data_->query_data;
         }
@@ -122,40 +180,7 @@ namespace route_app {
 }
 
 int main(int argc, char** argv) {
-    string url = "https://api.openstreetmap.org";
-    string api = "/api/0.6";
-    string bounding_box_query_prefix = "/map?bbox=";
-
-    cout << std::setprecision(7);
-    cout << std::fixed;
-
-    //input from command line arguments
-    route_app::StorageFlags sf = route_app::StorageFlags::FILE_STORAGE;
-    string minLong = "20.75456";
-    string minLat = "38.95622";
-    string maxLong = "20.75478";
-    string maxLat = "38.95636";
-
-    //4to lykeio
-    //minLong = "20.73755";
-    //minLat = "38.95697";
-    //maxLong = "20.74000";
-    //maxLat = "38.95866";
-
-    //lina sandells plan
-    minLong = "17.96048";
-    minLat = "59.28415";
-    maxLong = "17.96267";
-    maxLat = "59.28519";
-
-    //minLong = "17.96058";
-    //minLat = "59.28466";
-    //maxLong = "17.96068";
-    //maxLat = "59.28472";
-    string bounding_box_arguments = minLong + "," + minLat + "," + maxLong + "," + maxLat;
-    string bounding_box_query = bounding_box_query_prefix + bounding_box_arguments;
-
-    route_app::RouteApplication *routeApp = new route_app::RouteApplication(sf, url, api, bounding_box_query);
+    RouteApplication *routeApp = new RouteApplication(argc, argv);
     routeApp->HTTPRequest();
     routeApp->ModelData();
     //routeApp->FindRoute();

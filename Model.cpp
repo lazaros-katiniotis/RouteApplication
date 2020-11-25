@@ -96,14 +96,14 @@ namespace route_app {
 		xml_parse_result result;
 		errno_t err = NULL;
 
-		switch (data->sf) {
-		case StorageFlags::FILE_STORAGE:
+		switch (data->sm) {
+		case StorageMethod::FILE_STORAGE:
 			CloseFile(data->query_file);
-			result = doc_.load_file(data->query_file->filename);
+			result = doc_.load_file(data->query_file->filename.c_str());
 			break;
-		case StorageFlags::STRUCT_STORAGE:
+		case StorageMethod::MEMORY_STORAGE:
 			string memory = data->query_data->memory;
-			cout << "User-preferred locale setting is " << std::locale("").name().c_str() << '\n';
+			//cout << "User-preferred locale setting is " << std::locale("").name().c_str() << '\n';
 			//locale loc(std::locale(), new std::codecvt_utf8<char32_t>);
 			//memory.imbue(loc);
 			result = doc_.load_buffer(data->query_data->memory, data->query_data->size);

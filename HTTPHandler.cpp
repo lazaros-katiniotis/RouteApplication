@@ -51,12 +51,12 @@ CURLcode HTTPHandler::Request(AppData *data) {
     curl_easy_setopt(curl_handle, CURLOPT_URL, &(query_[0]));
     curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "libcurl-agent/1.0");
     curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, 0);
-    switch (data->sf) {
-    case StorageFlags::STRUCT_STORAGE:
+    switch (data->sm) {
+    case StorageMethod::MEMORY_STORAGE:
         curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_callback);
         curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void*)&(*data->query_data));
         break;
-    case StorageFlags::FILE_STORAGE:
+    case StorageMethod::FILE_STORAGE:
         curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, data->query_file->file);
         break;
     }
