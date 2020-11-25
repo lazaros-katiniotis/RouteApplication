@@ -132,7 +132,7 @@ namespace route_app {
     {
         using R = Model::Road;
         auto types = { R::Motorway, R::Trunk, R::Primary,  R::Secondary, R::Tertiary,
-            R::Residential, R::Service, R::Unclassified, R::Footway };
+            R::Residential, R::Service, R::Unclassified, R::Footway, R::Cycleway};
         for (auto type : types) {
             auto& rep = road_reps_[type];
             rep.brush = brush{ RoadColor(type) };
@@ -154,12 +154,12 @@ static float RoadMetricWidth(Model::Road::Type type)
     case Model::Road::Unclassified: return 2.5f;
     case Model::Road::Service:      return 1.f;
     case Model::Road::Footway:      return 0.f;
+    case Model::Road::Cycleway:     return 0.5f;
     default:                        return 1.f;
     }
 }
 
-static rgba_color RoadColor(Model::Road::Type type)
-{
+static rgba_color RoadColor(Model::Road::Type type) {
     switch (type) {
     case Model::Road::Motorway:     return rgba_color{ 226, 122, 143 };
     case Model::Road::Trunk:        return rgba_color{ 245, 161, 136 };
@@ -169,17 +169,20 @@ static rgba_color RoadColor(Model::Road::Type type)
     case Model::Road::Residential:  return rgba_color{ 254, 254, 254 };
     case Model::Road::Service:      return rgba_color{ 254, 254, 254 };
     case Model::Road::Footway:      return rgba_color{ 241, 106, 96 };
+    case Model::Road::Cycleway:     return rgba_color{ 96, 96, 254 };
     case Model::Road::Unclassified: return rgba_color{ 254, 254, 254 };
     default:                        return rgba_color::grey;
     }
 }
 
-static dashes RoadDashes(Model::Road::Type type)
-{
-    return type == Model::Road::Footway ? dashes{ 0.f, {1.f, 2.f} } : dashes{};
+static dashes RoadDashes(Model::Road::Type type) {
+    switch (type) {
+    case Model::Road::Footway:      return dashes{ 0.f, {1.f, 2.f} };
+    case Model::Road::Cycleway:     return dashes{ 0.f, {1.f, 2.f} };
+    default:                        return dashes{};
+    }    
 }
 
 static point_2d ToPoint2D(const Model::Node& node) noexcept {
     return point_2d(static_cast<float>(node.x), static_cast<float>(node.y));
 }
-

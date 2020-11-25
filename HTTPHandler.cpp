@@ -68,6 +68,6 @@ CURLcode HTTPHandler::Request(AppData *data) {
 }
 
 void HTTPHandler::Release() {
+    PrintDebugMessage(APPLICATION_NAME, "HTTPHandler", "releasing resources...", false);
 	curl_global_cleanup();
-	cout << "HTTPHandler released" << endl;
 }

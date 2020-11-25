@@ -34,6 +34,7 @@ namespace route_app {
 		if (type == "steps")           return Model::Road::Footway;
 		if (type == "path")            return Model::Road::Footway;
 		if (type == "pedestrian")      return Model::Road::Footway;
+		if (type == "cycleway")        return Model::Road::Cycleway;
 		return Model::Road::Invalid;
 	}
 

@@ -35,7 +35,7 @@ namespace route_app {
         };
 
         struct Road {
-            enum Type { Invalid, Unclassified, Service, Residential, Tertiary, Secondary, Primary, Trunk, Motorway, Footway };
+            enum Type { Invalid, Unclassified, Service, Residential, Tertiary, Secondary, Primary, Trunk, Motorway, Footway, Cycleway };
             int way;
             Type type;
         };
@@ -88,7 +88,6 @@ namespace route_app {
         void ParseBounds();
         Element* ParseNode(const xml_node& node, int& index);
         void ParseAttributes(const xml_node& node, Element* element, int index);
-        //static Road::Type StringToRoadType(string_view type);
     };
 }
 

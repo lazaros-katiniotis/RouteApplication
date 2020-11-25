@@ -142,10 +142,16 @@ int main(int argc, char** argv) {
     //maxLong = "20.74000";
     //maxLat = "38.95866";
 
+    //lina sandells plan
     minLong = "17.96048";
     minLat = "59.28415";
     maxLong = "17.96267";
     maxLat = "59.28519";
+
+    //minLong = "17.96058";
+    //minLat = "59.28466";
+    //maxLong = "17.96068";
+    //maxLat = "59.28472";
     string bounding_box_arguments = minLong + "," + minLat + "," + maxLong + "," + maxLat;
     string bounding_box_query = bounding_box_query_prefix + bounding_box_arguments;
 
