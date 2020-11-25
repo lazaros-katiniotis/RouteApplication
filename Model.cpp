@@ -75,15 +75,14 @@ namespace route_app {
 	}
 
 	void Model::PrintData() {
-
-		cout << "Printing roads..." << endl;
-		for (Road road : roads_) {
-			cout << &road << ", " << road.type << ", " << road.way << endl;
-			auto& way = ways_[road.way];
-			for (int it : way.nodes) {
-				cout << "nodes_[" << it << "]: (" << (double)nodes_[it].x << ", " << (double)nodes_[it].y << ")" << endl;
-			}
-		}
+		//cout << "Printing roads..." << endl;
+		//for (Road road : roads_) {
+		//	cout << &road << ", " << road.type << ", " << road.way << endl;
+		//	auto& way = ways_[road.way];
+		//	for (int it : way.nodes) {
+		//		cout << "nodes_[" << it << "]: (" << (double)nodes_[it].x << ", " << (double)nodes_[it].y << ")" << endl;
+		//	}
+		//}
 		//cout << "Printing ways..." << endl;
 		//for (Way way : ways_) {
 		//	for (int it : way.nodes) {

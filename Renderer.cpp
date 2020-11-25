@@ -53,7 +53,6 @@ namespace route_app {
                 auto& rep = rep_it->second;
                 auto& way = ways[road.way];
                 auto width = rep.metric_width > 0.f ? (rep.metric_width * pixels_in_meters_) : 1.f;
-                cout << width << endl;
                 auto sp = stroke_props{ width, line_cap::round };
                 auto path = PathFromWay(way);
                 surface.stroke(rep.brush, path, std::nullopt, sp, rep.dashes);
@@ -62,9 +61,7 @@ namespace route_app {
     }
 
     interpreted_path Renderer::PathFromWay(const Model::Way& way) const {
-        cout << "Creating path from way " << &way << endl;
         if (way.nodes.empty()) {
-            cout << "way is empty" << endl;
             return {};
         }
 
@@ -73,8 +70,7 @@ namespace route_app {
         auto pb = path_builder{};
         pb.matrix(matrix_);
         pb.new_figure(ToPoint2D(nodes[way.nodes.front()]));
-        for (auto it = ++way.nodes.begin(); it != std::end(way.nodes); ++it) {
-            cout << &nodes[*it] << endl;
+        for (auto it = ++way.nodes.begin(); it != end(way.nodes); ++it) {
             pb.line(ToPoint2D(nodes[*it]));
         }
         return interpreted_path{ pb };
