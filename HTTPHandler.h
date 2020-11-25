@@ -1,4 +1,6 @@
 #pragma once
+#ifndef ROUTE_APP_HTTP_HANDLER_H
+#define ROUTE_APP_HTTP_HANDLER_H
 #include <iostream>
 #include <curl/curl.h>
 
@@ -19,3 +21,5 @@ namespace route_app {
 		CURLcode Request(AppData *data);
 	};
 }
+
+#endif

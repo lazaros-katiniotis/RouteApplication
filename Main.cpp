@@ -50,7 +50,7 @@ namespace route_app {
                 data_->query_file = new QueryFile();
                 data_->query_file->filename = "data.xml";
                 _set_errno(0);
-                error = fopen_s(&data_->query_file->file, data_->query_file->filename, "wb");
+                error = fopen_s(&data_->query_file->file, data_->query_file->filename, "w");
                 if (error != 0) {
                     string filename = (data_->query_file->filename);
                     string message = "Error opening file '" + filename + "'.";
@@ -87,7 +87,7 @@ namespace route_app {
 
     void RouteApplication::Render() {
         PrintDebugMessage(APPLICATION_NAME, "", "Initializing renderer...", true);
-        renderer_ = new Renderer();
+        renderer_ = new Renderer(model_);
         DisplayMap();
     }
 
@@ -126,6 +126,9 @@ int main(int argc, char** argv) {
     string api = "/api/0.6";
     string bounding_box_query_prefix = "/map?bbox=";
 
+    cout << std::setprecision(7);
+    cout << std::fixed;
+
     //input from command line arguments
     route_app::StorageFlags sf = route_app::StorageFlags::FILE_STORAGE;
     string minLong = "20.75456";
@@ -138,6 +141,11 @@ int main(int argc, char** argv) {
     //minLat = "38.95697";
     //maxLong = "20.74000";
     //maxLat = "38.95866";
+
+    minLong = "17.95977";
+    minLat = "59.28412";
+    maxLong = "17.96303";
+    maxLat = "59.28502";
     string bounding_box_arguments = minLong + "," + minLat + "," + maxLong + "," + maxLat;
     string bounding_box_query = bounding_box_query_prefix + bounding_box_arguments;
 
