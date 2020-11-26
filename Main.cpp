@@ -56,6 +56,9 @@ namespace route_app {
         string osm_data_file;
         const char* file_mode = "w";
         bool successfully_parsed_arguments = true;
+        //x - 0
+        //0.00333333
+        double interval = 0.00333333f;
         if (argc > 1) {
             for (int i = 1; i < argc; ++i) {
                 if (string_view{ argv[i] } == "-b") {
@@ -185,7 +188,7 @@ int main(int argc, char** argv) {
     RouteApplication *routeApp = new RouteApplication(argc, argv);
     routeApp->HTTPRequest();
     routeApp->ModelData();
-    //routeApp->FindRoute();
+    routeApp->FindRoute();
     routeApp->Render();
     delete routeApp;
 }

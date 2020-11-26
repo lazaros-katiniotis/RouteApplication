@@ -73,6 +73,7 @@ namespace route_app {
                 auto width = rep.metric_width > 0.f ? (rep.metric_width * pixels_in_meters_) : 1.f;
                 auto sp = stroke_props{ width, line_cap::round };
                 auto path = PathFromWay(way);
+                surface.stroke(railway_stroke_brush_, path, nullopt, stroke_props{ railway_outer_width_ * pixels_in_meters_ });
                 surface.stroke(rep.brush, path, std::nullopt, sp, rep.dashes);
             }
         }

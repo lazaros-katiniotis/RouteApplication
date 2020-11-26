@@ -56,9 +56,6 @@ namespace route_app {
 		ParseData(data);
 		CreateRoadGraph();
 		AdjustCoordinates();
-		sort(roads_.begin(), roads_.end(), [](const auto& _1st, const auto& _2nd) {
-			return (int)_1st.type < (int)_2nd.type;
-			});
 		PrintData();
 	}
 
@@ -155,7 +152,6 @@ namespace route_app {
 	Model::Element* Model::ParseNode(const xml_node& node, int &index) {
 		auto name = string_view{ node.name() };
 		auto value = string_view{ node.value() };
-		//cout << name << ":" << value << endl;
 
 		if (name == "node") {
 			string id = node.attribute("id").as_string();
@@ -181,7 +177,6 @@ namespace route_app {
 
 		if (name == "nd") {
 			auto ref = node.attribute("ref").as_string();
-			//cout << "ref: " << ref << endl;
 			if (auto it = node_id_to_number_.find(ref); it != end(node_id_to_number_)) {
 				Way* way = dynamic_cast<Way*>(element);
 				way->nodes.emplace_back(it->second);
@@ -195,14 +190,17 @@ namespace route_app {
 				if (auto road_type = StringToRoadType(type); road_type != Road::Invalid) {
 					roads_.emplace_back();
 					roads_.back().way = index;
+					roads_.back().index = (int)roads_.size() - 1;
 					roads_.back().type = road_type;
-					string road_name = node.attribute("name").as_string();
-					roads_.back().name = road_name;
+					for (const xpath_node& child : node.parent().children()) {
+						auto k = string_view{ child.node().attribute("k").as_string() };
+						if (k == "name") {
+							roads_.back().name = child.node().attribute("v").as_string();
+						}
+					}
 				}
 			} 
 			else if (category == "building") {
-				//cout << "category: " << category << endl;
-				//cout << "type: " << type << endl;
 				buildings_.emplace_back();
 				buildings_.back().outer = { index };
 			}
@@ -229,15 +227,27 @@ namespace route_app {
 	}
 
 	void Model::CreateRoadGraph() {
-		//for (int i = 0; i < roads_.size(); i++) {
-		//	Way way = ways_[roads_[i].way];
-
-		//}
+		PrintDebugMessage(APPLICATION_NAME, "Model", "Creating map of nodes to roads...", false);
+		sort(roads_.begin(), roads_.end(), [](const auto& _1st, const auto& _2nd) {
+			return (int)_1st.type < (int)_2nd.type;
+		});
 		for (auto road = roads_.begin(); road != end(roads_); ++road) {
 			auto way = ways_[road->way];
-			cout << road->name << endl;
-			for (auto node = way.nodes.begin(); node != end(way.nodes); ++node) {
-				cout << "\t" << *node << endl;
+			for (auto node_number = way.nodes.begin(); node_number != end(way.nodes); ++node_number) {
+				node_number_to_road_numbers[*node_number].emplace_back();
+				node_number_to_road_numbers[*node_number].back() = road->index;
+			}
+		}
+
+		for (int index = 0; index < nodes_.size(); index++) {
+			if (auto it = node_number_to_road_numbers.find(index); it != node_number_to_road_numbers.end()) {
+				//print nodes that share at least 2 roads
+				if (it->second.size() > 1) {
+					cout << "node: " << index << endl;
+					for (auto road_number = it->second.begin(); road_number != it->second.end(); ++road_number++) {
+						cout << "road name: " << roads_[*road_number].name << "(" << *road_number << ")" << endl;
+					}
+				}
 			}
 		}
 	}
@@ -249,6 +259,8 @@ namespace route_app {
 		const auto earth_radius = 6378137.0;
 		const auto lat2ym = [&](double lat) { return log(tan(lat * deg_to_rad / 2 + pi / 4)) / 2 * earth_radius; };
 		const auto lon2xm = [&](double lon) { return lon * deg_to_rad / 2 * earth_radius; };
+		cout << "delta longtitude: " << (max_lon_ - min_lon_) << endl;
+		cout << "delta latitude: " << (max_lat_ - min_lat_) << endl;
 		const auto dx = lon2xm(max_lon_) - lon2xm(min_lon_);
 		const auto dy = lat2ym(max_lat_) - lat2ym(min_lat_);
 		const auto min_x = lon2xm(min_lon_);

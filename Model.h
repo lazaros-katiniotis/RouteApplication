@@ -36,9 +36,10 @@ namespace route_app {
 
         struct Road {
             enum Type { Invalid, Unclassified, Service, Residential, Tertiary, Secondary, Primary, Trunk, Motorway, Footway, Cycleway };
+            int index;
             int way;
             Type type;
-            string_view name;
+            string name;
         };
 
         struct Railway {
@@ -81,7 +82,7 @@ namespace route_app {
         double metric_scale_ = 1.f;
         unordered_map<string, int> node_id_to_number_;
         unordered_map<string, int> way_id_to_number_;
-        unordered_map<string, int> node_id_to_road_number;
+        unordered_map<int, vector<int>> node_number_to_road_numbers;
         vector<Building> buildings_;
         vector<Railway> railways_;
         vector<Landuse> landuses_;
@@ -99,6 +100,7 @@ namespace route_app {
         void ParseBounds();
         Element* ParseNode(const xml_node& node, int& index);
         void ParseAttributes(const xml_node& node, Element* element, int index);
+
     };
 }
 
