@@ -19,20 +19,38 @@ namespace route_app {
 
     void Renderer::Initialize() {
         BuildRoadReps();
-        //BuildLanduseBrushes();
+        BuildLanduseBrushes();
     }
 
-    //void Renderer::InitializeWindow(int width, int height) {
-    //    auto display = output_surface {width, height, format::argb32, scaling::none, refresh_style::fixed, 30.f};
-    //    display.size_change_callback([&](output_surface &surface) {
-    //        surface.dimensions(surface.display_dimensions());
-    //    });
-    //    display.draw_callback([&](auto &surface) {
-    //        brush mainColor {rgba_color::green};
-    //        surface.paint(mainColor);
-    //    });
-    //    display.begin_show();
-    //}
+    void Renderer::DrawLanduses(output_surface& surface) const {
+        for (auto& landuse : model_->GetLanduses())
+            if (auto br = landuse_brushes_.find(landuse.type); br != landuse_brushes_.end())
+                surface.fill(br->second, PathFromMP(landuse));
+    }
+
+    void Renderer::DrawLeisure(output_surface& surface) const {
+        for (auto& leisure : model_->GetLeisures()) {
+            auto path = PathFromMP(leisure);
+            surface.fill(leisure_fill_brush_, path);
+            surface.stroke(leisure_outline_brush_, path, std::nullopt, leisure_outline_stroke_props_);
+        }
+    }
+
+    void Renderer::DrawRailways(output_surface& surface) const {
+        auto ways = model_->GetWays().data();
+        for (auto& railways : model_->GetRailways()) {
+            auto way = ways[railways.way];
+            auto path = PathFromWay(way);
+            surface.stroke(railway_stroke_brush_, path, nullopt, stroke_props{ railway_outer_width_ * pixels_in_meters_ });
+            surface.stroke(railway_dash_brush_, path, nullopt, stroke_props{ railway_inner_width_ * pixels_in_meters_ }, railway_dashes_);
+        }
+    }
+
+    void Renderer::DrawWater(output_surface& surface) const {
+        for (auto& water : model_->GetWaters()) {
+            surface.fill(water_fill_brush_, PathFromMP(water));
+        }
+    }
 
     void Renderer::DrawBuildings(output_surface& surface) const
     {
@@ -113,11 +131,20 @@ namespace route_app {
         //cout << "pixels_in_meters_: " << pixels_in_meters_ << endl;
         matrix_ =   matrix_2d::create_scale({ scale_, -scale_ }) *
                     matrix_2d::create_translate({ 0.f, static_cast<float>(surface.dimensions().y()) });
-        
         surface.paint(background_fill_brush_);
         //surface.paint(mainColor);
+        DrawLanduses(surface);
+        DrawLeisure(surface);
+        DrawWater(surface);
+        DrawRailways(surface);
         DrawHighways(surface);
         DrawBuildings(surface);
+    }
+
+    void Renderer::Resize(output_surface& surface) {
+        cout << "screen size changed" << endl;
+        cout << surface.display_dimensions().data().x << ", " << surface.display_dimensions().data().y << endl;
+        surface.dimensions(surface.display_dimensions().data());
     }
 
     void Renderer::Release() {
@@ -140,6 +167,17 @@ namespace route_app {
             rep.dashes = RoadDashes(type);
         }
     }
+}
+
+void Renderer::BuildLanduseBrushes()
+{
+    landuse_brushes_.insert_or_assign(Model::Landuse::Commercial, brush{ rgba_color{233, 195, 196} });
+    landuse_brushes_.insert_or_assign(Model::Landuse::Construction, brush{ rgba_color{187, 188, 165} });
+    landuse_brushes_.insert_or_assign(Model::Landuse::Grass, brush{ rgba_color{197, 236, 148} });
+    landuse_brushes_.insert_or_assign(Model::Landuse::Forest, brush{ rgba_color{158, 201, 141} });
+    landuse_brushes_.insert_or_assign(Model::Landuse::Industrial, brush{ rgba_color{223, 197, 220} });
+    landuse_brushes_.insert_or_assign(Model::Landuse::Railway, brush{ rgba_color{223, 197, 220} });
+    landuse_brushes_.insert_or_assign(Model::Landuse::Residential, brush{ rgba_color{209, 209, 209} });
 }
 
 static float RoadMetricWidth(Model::Road::Type type)

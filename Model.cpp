@@ -54,6 +54,7 @@ namespace route_app {
 		PrintDebugMessage(APPLICATION_NAME, "Model", "Initiating model...", false);
 		OpenDocument(data);
 		ParseData(data);
+		CreateRoadGraph();
 		AdjustCoordinates();
 		sort(roads_.begin(), roads_.end(), [](const auto& _1st, const auto& _2nd) {
 			return (int)_1st.type < (int)_2nd.type;
@@ -195,6 +196,8 @@ namespace route_app {
 					roads_.emplace_back();
 					roads_.back().way = index;
 					roads_.back().type = road_type;
+					string road_name = node.attribute("name").as_string();
+					roads_.back().name = road_name;
 				}
 			} 
 			else if (category == "building") {
@@ -202,6 +205,39 @@ namespace route_app {
 				//cout << "type: " << type << endl;
 				buildings_.emplace_back();
 				buildings_.back().outer = { index };
+			}
+			else if (category == "railway") {
+				railways_.emplace_back();
+				railways_.back().way = index;
+			}
+			else if (category == "leisure" || (category == "natural" && (type == "wood" || type == "tree_row" || type == "scrub" || type == "grassland")) || (category == "landcover" && type == "grass")) {
+				leisures_.emplace_back();
+				leisures_.back().outer = { index };
+			}
+			else if (category == "natural" && (type == "water" || type == "coastline")) {
+				waters_.emplace_back();
+				waters_.back().outer = { index };
+			}
+			else if (category == "landuse") {
+				if (auto landuse_type = StringToLanduseType(type); landuse_type != Landuse::Invalid) {
+					landuses_.emplace_back();
+					landuses_.back().outer = { index };
+					landuses_.back().type = landuse_type;
+				}
+			}
+		}
+	}
+
+	void Model::CreateRoadGraph() {
+		//for (int i = 0; i < roads_.size(); i++) {
+		//	Way way = ways_[roads_[i].way];
+
+		//}
+		for (auto road = roads_.begin(); road != end(roads_); ++road) {
+			auto way = ways_[road->way];
+			cout << road->name << endl;
+			for (auto node = way.nodes.begin(); node != end(way.nodes); ++node) {
+				cout << "\t" << *node << endl;
 			}
 		}
 	}

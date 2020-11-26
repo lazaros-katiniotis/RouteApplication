@@ -38,6 +38,7 @@ namespace route_app {
             enum Type { Invalid, Unclassified, Service, Residential, Tertiary, Secondary, Primary, Trunk, Motorway, Footway, Cycleway };
             int way;
             Type type;
+            string_view name;
         };
 
         struct Railway {
@@ -62,14 +63,13 @@ namespace route_app {
 
         Model(AppData* data);
         ~Model();
-        void ParseData(AppData* data);
-        void OpenDocument(AppData* data);
-        void AdjustCoordinates();
-        void PrintDoc(const char* message, xml_document* doc, xml_parse_result* result);
-        void PrintData();
         double GetMetricScale() { return metric_scale_; }
         auto& GetBuildings() { return buildings_; }
         auto& GetRoads() { return roads_; }
+        auto& GetRailways() { return railways_; }
+        auto& GetLanduses() { return landuses_; }
+        auto& GetLeisures() { return leisures_; }
+        auto& GetWaters() { return waters_; }
         const vector<Node>& GetNodes() const noexcept { return nodes_; }
         const vector<Way>& GetWays() const noexcept { return ways_; }
     private:
@@ -81,10 +81,21 @@ namespace route_app {
         double metric_scale_ = 1.f;
         unordered_map<string, int> node_id_to_number_;
         unordered_map<string, int> way_id_to_number_;
+        unordered_map<string, int> node_id_to_road_number;
         vector<Building> buildings_;
+        vector<Railway> railways_;
+        vector<Landuse> landuses_;
+        vector<Leisure> leisures_;
+        vector<Water> waters_;
         vector<Road> roads_;
         vector<Node> nodes_;
         vector<Way> ways_;
+        void OpenDocument(AppData* data);
+        void ParseData(AppData* data);
+        void CreateRoadGraph();
+        void AdjustCoordinates();
+        void PrintDoc(const char* message, xml_document* doc, xml_parse_result* result);
+        void PrintData();
         void ParseBounds();
         Element* ParseNode(const xml_node& node, int& index);
         void ParseAttributes(const xml_node& node, Element* element, int index);

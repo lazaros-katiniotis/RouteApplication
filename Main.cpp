@@ -46,6 +46,8 @@ namespace route_app {
     void RouteApplication::ParseCommandLineArguments(int argc, char** argv) {
         PrintDebugMessage(APPLICATION_NAME, "", "Parsing arguments from command line...", false);
         //RouteApplication.exe -b 20.75456,38.95622,20.75478,38.95636 -f test.xml
+        //preveza: 20.7500 38.9571 20.7594 38.9628
+        //fruengen: 17.95956 59.28393 17.96599  59.28651
         string url = "https://api.openstreetmap.org";
         string api = "/api/0.6";
         string osm_bounding_box_query_prefix = "/map?bbox=";
@@ -158,9 +160,9 @@ namespace route_app {
     }
 
     void RouteApplication::DisplayMap() {
-        auto display = io2d::output_surface{ 400, 400, io2d::format::argb32, io2d::scaling::none, io2d::refresh_style::fixed, 30 };
-        display.size_change_callback([](io2d::output_surface& surface) {
-            surface.dimensions(surface.display_dimensions());
+        auto display = io2d::output_surface{ 600, 600, io2d::format::argb32, io2d::scaling::none, io2d::refresh_style::fixed, 30 };
+        display.size_change_callback([&](io2d::output_surface& surface) {
+            renderer_->Resize(surface);
         });
         display.draw_callback([&](io2d::output_surface& surface) {
             renderer_->Display(surface);
