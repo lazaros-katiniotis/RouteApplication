@@ -22,6 +22,8 @@ namespace route_app {
         Model *model_;
         Renderer *renderer_;
         void ParseCommandLineArguments(int argc, char** argv);
+        bool CreateQueryFromBoundingBox(int argc, char** argv, int& index, string* bounding_box_query);
+        bool CreateQueryFromPoint(int argc, char** argv, int& index, string* bounding_box_query);
         void InitializeAppData(StorageMethod sm, string filename, const char* file_mode);
         void InitializeHTTPRequestQuery(string url, string api, string arguments);
         void Release();
@@ -34,6 +36,7 @@ namespace route_app {
         void FindRoute();
         void Render();
         void DisplayMap();
+        const double BOUNDING_BOX_INTERVAL = 0.00333333f;
     };
 
     RouteApplication::RouteApplication(int argc, char** argv) {
@@ -52,37 +55,26 @@ namespace route_app {
         string api = "/api/0.6";
         string osm_bounding_box_query_prefix = "/map?bbox=";
         route_app::StorageMethod sm = route_app::StorageMethod::MEMORY_STORAGE;
-        string osm_bounding_box_query = "";
+        string *osm_bounding_box_query = new string("");
         string osm_data_file;
         const char* file_mode = "w";
         bool successfully_parsed_arguments = true;
         //x - 0
         //0.00333333
-        double interval = 0.00333333f;
+
         if (argc > 1) {
             for (int i = 1; i < argc; ++i) {
                 if (string_view{ argv[i] } == "-b") {
-                    int coordinate_count = 0;
-                    while (++i < argc) {
-                        osm_bounding_box_query += argv[i];
-                        if (++coordinate_count != 4) {
-                            osm_bounding_box_query += ",";
-                        }
-                        else {
-                            break;
-                        }
-                    }
-                    if (coordinate_count != 4) {
-                        successfully_parsed_arguments = false;
-                        break;
-                    }
-                    PrintDebugMessage(APPLICATION_NAME, "", "OSM Bounding box found: " + osm_bounding_box_query, false);
+                    successfully_parsed_arguments = CreateQueryFromBoundingBox(argc, argv, i, osm_bounding_box_query);
+                }
+                else if (string_view{ argv[i] } == "-p") {
+                    successfully_parsed_arguments = CreateQueryFromPoint(argc, argv, i, osm_bounding_box_query);
                 }
                 else if (string_view{ argv[i] } == "-f") {
                     sm = StorageMethod::FILE_STORAGE;
                     if (++i < argc) {
                         osm_data_file = argv[i];
-                        if (osm_bounding_box_query == "") {
+                        if (*osm_bounding_box_query == "") {
                             file_mode = "r";
                         }
                         PrintDebugMessage(APPLICATION_NAME, "", "OSM data file found: '" + osm_data_file + "'", false);
@@ -95,14 +87,70 @@ namespace route_app {
             }
         }
         if (!successfully_parsed_arguments) {
-            cout << "Usage: maps [-b MinLongitude MinLattitude MaxLongitude MaxLattitude] [-f filename.xml]" << std::endl;
+            cout << "Usage: maps [-b MinLongitude MinLattitude MaxLongitude MaxLattitude] [-p Longtitude Latitude] [-f filename.xml]" << std::endl;
             cout << "Will use the map of Rapperswil: 8.81598,47.22277,8.83,47.23" << std::endl << std::endl;
-            osm_bounding_box_query = "8.81598,47.22277,8.83,47.23";
+            //osm_bounding_box_query = new string("8.81598,47.22277,8.83,47.23");
         }
 
         InitializeAppData(sm, osm_data_file, file_mode);
-        InitializeHTTPRequestQuery(url, api, osm_bounding_box_query_prefix + osm_bounding_box_query);
+        InitializeHTTPRequestQuery(url, api, osm_bounding_box_query_prefix + *osm_bounding_box_query);
+        delete osm_bounding_box_query;
     }
+
+    bool RouteApplication::CreateQueryFromBoundingBox(int argc, char** argv, int& index, string* bounding_box_query) {
+        static int coordinate_count = 0;
+        while (++index < argc) {
+            //if (total_coords == 4) {
+            //}
+            //else if (total_coords == 2) {
+            //    double coord = atof(argv[index]);
+            //    for (int i = 0; i < 2; i++) {
+            //        *bounding_box_query += (coord - BOUNDING_BOX_INTERVAL);
+            //        *bounding_box_query += ",";
+            //    }
+            //}
+            *bounding_box_query += argv[index];
+            if (++coordinate_count != 4) {
+                *bounding_box_query += ",";
+            }
+            else {
+                break;
+            }
+        }
+        if (coordinate_count != 4) {
+            return false;
+        }
+        PrintDebugMessage(APPLICATION_NAME, "", "OSM Bounding box found: " + *bounding_box_query, false);
+        return true;
+    }
+
+    bool RouteApplication::CreateQueryFromPoint(int argc, char** argv, int& index, string* bounding_box_query) {
+        static int coordinate_count = 0;
+        while (++index < argc) {
+            //if (total_coords == 4) {
+            //}
+            //else if (total_coords == 2) {
+            //    double coord = atof(argv[index]);
+            //    for (int i = 0; i < 2; i++) {
+            //        *bounding_box_query += (coord - BOUNDING_BOX_INTERVAL);
+            //        *bounding_box_query += ",";
+            //    }
+            //}
+            *bounding_box_query += argv[index];
+            if (++coordinate_count != 2) {
+                *bounding_box_query += ",";
+            }
+            else {
+                break;
+            }
+        }
+        if (coordinate_count != 2) {
+            return false;
+        }
+        PrintDebugMessage(APPLICATION_NAME, "", "OSM Bounding box found: " + *bounding_box_query, false);
+        return true;
+    }
+
 
     void RouteApplication::InitializeAppData(StorageMethod sm, string filename, const char* file_mode) {
         data_ = new AppData();
