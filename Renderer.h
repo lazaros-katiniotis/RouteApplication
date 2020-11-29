@@ -38,6 +38,9 @@ namespace route_app {
             float railway_outer_width_ = 3.f;
             float railway_inner_width_ = 2.f;
             stroke_props building_outline_stroke_props_{ 1.f };
+
+            brush route_stroke_brush_{ rgba_color{254,0,254} };
+            stroke_props route_outline_stroke_props_{ 3.f, line_cap::round };
             unordered_map<Model::Road::Type, RoadRep> road_reps_;
             unordered_map<Model::Landuse::Type, brush> landuse_brushes_;
 
@@ -50,6 +53,7 @@ namespace route_app {
             void DrawLeisure(output_surface& surface) const;
             void DrawRailways(output_surface& surface) const;
             void DrawWater(output_surface& surface) const;
+            void DrawRoute(output_surface& surface) const;
             interpreted_path PathFromMP(const Model::Multipolygon& mp) const;
             interpreted_path PathFromWay(const Model::Way& way) const;
             void BuildRoadReps();

@@ -71,6 +71,12 @@ namespace route_app {
         auto& GetLanduses() { return landuses_; }
         auto& GetLeisures() { return leisures_; }
         auto& GetWaters() { return waters_; }
+        void InitializePoint(Node& point, double x, double y);
+        void InitializePoint(Node& point, Node& other);
+        Node& GetStartingPoint() { return start_; }
+        Node& GetEndingPoint() { return end_; }
+        void CreateRoute();
+        const Way GetRoute() const noexcept { return route_; }
         const vector<Node>& GetNodes() const noexcept { return nodes_; }
         const vector<Way>& GetWays() const noexcept { return ways_; }
     private:
@@ -91,10 +97,14 @@ namespace route_app {
         vector<Road> roads_;
         vector<Node> nodes_;
         vector<Way> ways_;
+        Way route_;
+        Node start_;
+        Node end_;
         void OpenDocument(AppData* data);
         void ParseData(AppData* data);
         void CreateRoadGraph();
         void AdjustCoordinates();
+        void FindNearestNode(Node node);
         void PrintDoc(const char* message, xml_document* doc, xml_parse_result* result);
         void PrintData();
         void ParseBounds();

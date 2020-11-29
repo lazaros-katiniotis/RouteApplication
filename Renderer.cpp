@@ -74,9 +74,15 @@ namespace route_app {
                 auto sp = stroke_props{ width, line_cap::round };
                 auto path = PathFromWay(way);
                 surface.stroke(railway_stroke_brush_, path, nullopt, stroke_props{ railway_outer_width_ * pixels_in_meters_ });
-                surface.stroke(rep.brush, path, std::nullopt, sp, rep.dashes);
+                surface.stroke(rep.brush, path, nullopt, sp, rep.dashes);
             }
         }
+    }
+
+    void Renderer::DrawRoute(output_surface& surface) const {
+        auto& way = model_->GetRoute();
+        auto path = PathFromWay(way);
+        surface.stroke(route_stroke_brush_, path, nullopt, route_outline_stroke_props_);
     }
 
     interpreted_path Renderer::PathFromWay(const Model::Way& way) const {
@@ -140,6 +146,7 @@ namespace route_app {
         DrawRailways(surface);
         DrawHighways(surface);
         DrawBuildings(surface);
+        DrawRoute(surface);
     }
 
     void Renderer::Resize(output_surface& surface) {

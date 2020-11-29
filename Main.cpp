@@ -193,7 +193,16 @@ namespace route_app {
     }
 
     void RouteApplication::FindRoute() {
+        Model::Node start;
+        Model::Node end;
+        start.x = 0.6f;
+        start.y = 0.5f;
 
+        end.x = 0.8f;
+        end.y = 0.8f;
+        model_->InitializePoint(model_->GetStartingPoint(), start);
+        model_->InitializePoint(model_->GetEndingPoint(), end);
+        model_->CreateRoute();
     }
 
     void RouteApplication::Render() {

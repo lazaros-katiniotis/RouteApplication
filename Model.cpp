@@ -177,7 +177,7 @@ namespace route_app {
 
 		if (name == "nd") {
 			auto ref = node.attribute("ref").as_string();
-			if (auto it = node_id_to_number_.find(ref); it != end(node_id_to_number_)) {
+			if (auto it = node_id_to_number_.find(ref); it != std::end(node_id_to_number_)) {
 				Way* way = dynamic_cast<Way*>(element);
 				way->nodes.emplace_back(it->second);
 			}
@@ -231,9 +231,9 @@ namespace route_app {
 		sort(roads_.begin(), roads_.end(), [](const auto& _1st, const auto& _2nd) {
 			return (int)_1st.type < (int)_2nd.type;
 		});
-		for (auto road = roads_.begin(); road != end(roads_); ++road) {
+		for (auto road = roads_.begin(); road != std::end(roads_); ++road) {
 			auto way = ways_[road->way];
-			for (auto node_number = way.nodes.begin(); node_number != end(way.nodes); ++node_number) {
+			for (auto node_number = way.nodes.begin(); node_number != std::end(way.nodes); ++node_number) {
 				node_number_to_road_numbers[*node_number].emplace_back();
 				node_number_to_road_numbers[*node_number].back() = road->index;
 			}
@@ -250,6 +250,41 @@ namespace route_app {
 				}
 			}
 		}
+	}
+
+	void Model::CreateRoute() {
+		FindNearestNode(start_);
+		cout << route_.nodes[0] << endl;
+		FindNearestNode(end_);
+		cout << route_.nodes[1] << endl;
+
+	}
+
+
+	void Model::FindNearestNode(Node node) {
+		int closest_node_index = -1;
+		double minimum_distance = INFINITY;
+		for (int i = 0; i < nodes_.size(); i++) {
+			double dx = node.x - nodes_[i].x;
+			double dy = node.y - nodes_[i].y;
+			double distance = sqrt(pow(dx, 2) + pow(dy, 2));
+			if (distance < minimum_distance) {
+				minimum_distance = distance;
+				closest_node_index = i;
+			}
+		}
+		route_.nodes.emplace_back();
+		route_.nodes.back() = closest_node_index;
+	}
+
+	void Model::InitializePoint(Node& point, double x, double y) {
+		point.x = x;
+		point.y = y;
+	}
+
+	void Model::InitializePoint(Node& point, Node& other) {
+		point.x = other.x;
+		point.y = other.y;
 	}
 
 	void Model::AdjustCoordinates() {
