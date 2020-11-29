@@ -264,10 +264,9 @@ namespace route_app {
 	void Model::FindNearestNode(Node node) {
 		int closest_node_index = -1;
 		double minimum_distance = INFINITY;
+		double distance = 0;
 		for (int i = 0; i < nodes_.size(); i++) {
-			double dx = node.x - nodes_[i].x;
-			double dy = node.y - nodes_[i].y;
-			double distance = sqrt(pow(dx, 2) + pow(dy, 2));
+			distance = CalculateDistance(node, nodes_[i]);
 			if (distance < minimum_distance) {
 				minimum_distance = distance;
 				closest_node_index = i;
@@ -275,6 +274,10 @@ namespace route_app {
 		}
 		route_.nodes.emplace_back();
 		route_.nodes.back() = closest_node_index;
+	}
+
+	double inline Model::CalculateDistance(Node node, Node other) {
+		return sqrt(pow(node.x - other.x, 2) + pow(node.y - other.y, 2));
 	}
 
 	void Model::InitializePoint(Node& point, double x, double y) {

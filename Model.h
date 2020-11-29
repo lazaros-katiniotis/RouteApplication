@@ -73,9 +73,10 @@ namespace route_app {
         auto& GetWaters() { return waters_; }
         void InitializePoint(Node& point, double x, double y);
         void InitializePoint(Node& point, Node& other);
+        double inline CalculateDistance(Node node, Node other);
+        void CreateRoute();
         Node& GetStartingPoint() { return start_; }
         Node& GetEndingPoint() { return end_; }
-        void CreateRoute();
         const Way GetRoute() const noexcept { return route_; }
         const vector<Node>& GetNodes() const noexcept { return nodes_; }
         const vector<Way>& GetWays() const noexcept { return ways_; }
