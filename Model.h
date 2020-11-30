@@ -73,7 +73,7 @@ namespace route_app {
         auto& GetWaters() { return waters_; }
         void InitializePoint(Node& point, double x, double y);
         void InitializePoint(Node& point, Node& other);
-        double inline CalculateDistance(Node node, Node other);
+        double inline EuclideanDistance(Node node, Node other);
         void CreateRoute();
         Node& GetStartingPoint() { return start_; }
         Node& GetEndingPoint() { return end_; }
@@ -105,7 +105,7 @@ namespace route_app {
         void ParseData(AppData* data);
         void CreateRoadGraph();
         void AdjustCoordinates();
-        void FindNearestNode(Node node);
+        void FindNearestRoadNode(Node node);
         void PrintDoc(const char* message, xml_document* doc, xml_parse_result* result);
         void PrintData();
         void ParseBounds();

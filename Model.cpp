@@ -56,7 +56,7 @@ namespace route_app {
 		ParseData(data);
 		CreateRoadGraph();
 		AdjustCoordinates();
-		PrintData();
+		//PrintData();
 	}
 
 	Model::~Model() {
@@ -88,6 +88,18 @@ namespace route_app {
 		//		cout << "nodes_[" << it << "]: (" << (double)nodes_[it].x << ", " << (double)nodes_[it].y << ")" << endl;
 		//	}
 		//}
+
+		for (int index = 0; index < nodes_.size(); index++) {
+			if (auto it = node_number_to_road_numbers.find(index); it != node_number_to_road_numbers.end()) {
+				//print nodes that share at least 2 roads
+				if (it->second.size() > 1) {
+					cout << "node: " << index << endl;
+					for (auto road_number = it->second.begin(); road_number != it->second.end(); ++road_number++) {
+						cout << "road name: " << roads_[*road_number].name << "(" << *road_number << ")" << endl;
+					}
+				}
+			}
+		}
 	}
 
 	void Model::OpenDocument(AppData* data) {
@@ -238,45 +250,53 @@ namespace route_app {
 				node_number_to_road_numbers[*node_number].back() = road->index;
 			}
 		}
+	}
 
-		for (int index = 0; index < nodes_.size(); index++) {
-			if (auto it = node_number_to_road_numbers.find(index); it != node_number_to_road_numbers.end()) {
-				//print nodes that share at least 2 roads
-				if (it->second.size() > 1) {
-					cout << "node: " << index << endl;
-					for (auto road_number = it->second.begin(); road_number != it->second.end(); ++road_number++) {
-						cout << "road name: " << roads_[*road_number].name << "(" << *road_number << ")" << endl;
+	void Model::CreateRoute() {
+		cout << "Total roads: " << roads_.size() << endl;
+		cout << "Total nodes in roads: " << node_number_to_road_numbers.size() << endl;
+		FindNearestRoadNode(start_);
+		FindNearestRoadNode(end_);
+
+	}
+
+
+	void Model::FindNearestRoadNode(Node node) {
+		int closest_node_index = -1;
+		double minimum_distance = INFINITY;
+		double distance = 0;
+		bool find_nearest_roads_first = (roads_.size()*3 < node_number_to_road_numbers.size());
+		find_nearest_roads_first = false;
+		if (find_nearest_roads_first) {
+			PrintDebugMessage(APPLICATION_NAME, "Model", "Searching for nearest node using nearest roads...", false);
+			for (auto road_it = roads_.begin(); road_it != roads_.end(); road_it++) {
+				auto nodes = ways_[road_it->way].nodes;
+				int node_indices[] = { 0, nodes.size() / 2, nodes.size() - 1 };
+				for (int i = 0; i < 3; i++) {
+					int index = nodes[node_indices[i]];
+					distance = EuclideanDistance(node, nodes_[index]);
+					if (distance < minimum_distance) {
+						minimum_distance = distance;
+						closest_node_index = index;
 					}
 				}
 			}
 		}
-	}
-
-	void Model::CreateRoute() {
-		FindNearestNode(start_);
-		cout << route_.nodes[0] << endl;
-		FindNearestNode(end_);
-		cout << route_.nodes[1] << endl;
-
-	}
-
-
-	void Model::FindNearestNode(Node node) {
-		int closest_node_index = -1;
-		double minimum_distance = INFINITY;
-		double distance = 0;
-		for (int i = 0; i < nodes_.size(); i++) {
-			distance = CalculateDistance(node, nodes_[i]);
-			if (distance < minimum_distance) {
-				minimum_distance = distance;
-				closest_node_index = i;
+		else {
+			PrintDebugMessage(APPLICATION_NAME, "Model", "Searching for nearest node using all nodes in roads...", false);
+			for (auto it = node_number_to_road_numbers.begin(); it != node_number_to_road_numbers.end(); it++) {
+				distance = EuclideanDistance(node, nodes_[it->first]);
+				if (distance < minimum_distance) {
+					minimum_distance = distance;
+					closest_node_index = it->first;
+				}
 			}
 		}
 		route_.nodes.emplace_back();
 		route_.nodes.back() = closest_node_index;
 	}
 
-	double inline Model::CalculateDistance(Node node, Node other) {
+	double inline Model::EuclideanDistance(Node node, Node other) {
 		return sqrt(pow(node.x - other.x, 2) + pow(node.y - other.y, 2));
 	}
 

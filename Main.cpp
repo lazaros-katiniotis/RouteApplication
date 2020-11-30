@@ -58,9 +58,11 @@ namespace route_app {
         string *osm_bounding_box_query = new string("");
         string osm_data_file;
         const char* file_mode = "w";
-        bool successfully_parsed_arguments = true;
+        bool successfully_parsed_arguments = false;
         //x - 0
-        //0.00333333
+        //interval 0.00333333
+        //-b 20.74694 38.95525 20.75073 38.95908
+        //-b 17.9519 59.2908 17.9594 59.2943
 
         if (argc > 1) {
             for (int i = 1; i < argc; ++i) {
@@ -89,7 +91,7 @@ namespace route_app {
         if (!successfully_parsed_arguments) {
             cout << "Usage: maps [-b MinLongitude MinLattitude MaxLongitude MaxLattitude] [-p Longtitude Latitude] [-f filename.xml]" << std::endl;
             cout << "Will use the map of Rapperswil: 8.81598,47.22277,8.83,47.23" << std::endl << std::endl;
-            //osm_bounding_box_query = new string("8.81598,47.22277,8.83,47.23");
+            osm_bounding_box_query = new string("8.81598,47.22277,8.83,47.23");
         }
 
         InitializeAppData(sm, osm_data_file, file_mode);
@@ -195,11 +197,12 @@ namespace route_app {
     void RouteApplication::FindRoute() {
         Model::Node start;
         Model::Node end;
-        start.x = 0.6f;
-        start.y = 0.5f;
-
-        end.x = 0.8f;
-        end.y = 0.8f;
+        //start.x = 0.6f;
+        //start.y = 0.5f;
+        start.x = 0.2f;
+        start.y = 0.2f;
+        end.x = 0.5f;
+        end.y = 0.5f;
         model_->InitializePoint(model_->GetStartingPoint(), start);
         model_->InitializePoint(model_->GetEndingPoint(), end);
         model_->CreateRoute();
@@ -221,12 +224,16 @@ namespace route_app {
 
     void RouteApplication::DisplayMap() {
         auto display = io2d::output_surface{ 600, 600, io2d::format::argb32, io2d::scaling::none, io2d::refresh_style::fixed, 30 };
+        renderer_->Initialize(display);
+
         display.size_change_callback([&](io2d::output_surface& surface) {
             renderer_->Resize(surface);
         });
+
         display.draw_callback([&](io2d::output_surface& surface) {
             renderer_->Display(surface);
         });
+
         display.begin_show();
     }
 

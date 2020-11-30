@@ -18,7 +18,6 @@ namespace route_app {
                 float metric_width = 1.f;
             };
 
-            void Initialize();
             void Release();
             brush mainColor { rgba_color::green };
             Model *model_;
@@ -30,21 +29,27 @@ namespace route_app {
             brush building_outline_brush_               { rgba_color{181, 167, 154} };
             brush leisure_fill_brush_                   { rgba_color{189, 252, 193} };
             brush leisure_outline_brush_                { rgba_color{160, 248, 162} };
-            stroke_props leisure_outline_stroke_props_  { 1.f };
             brush water_fill_brush_                     { rgba_color{155, 201, 215} };
             brush railway_stroke_brush_                 { rgba_color{93,93,93} };
             brush railway_dash_brush_                   { rgba_color::white };
+            brush route_stroke_brush_                   { rgba_color{254,0,254} };
+            brush test_brush_                           { rgba_color{0,254,0} };
+
+            stroke_props leisure_outline_stroke_props_  { 1.f };
+            stroke_props building_outline_stroke_props_ { 1.f };
+            stroke_props road_outline_stroke_props_     { 7.5f, line_cap::round };
+            stroke_props route_outline_stroke_props_    { 3.f, line_cap::round };
+
             dashes railway_dashes_                      { 0.f, {3.f, 3.f} };
+
             float railway_outer_width_ = 3.f;
             float railway_inner_width_ = 2.f;
-            stroke_props building_outline_stroke_props_{ 1.f };
 
-            brush route_stroke_brush_{ rgba_color{254,0,254} };
-            stroke_props route_outline_stroke_props_{ 3.f, line_cap::round };
             unordered_map<Model::Road::Type, RoadRep> road_reps_;
             unordered_map<Model::Landuse::Type, brush> landuse_brushes_;
 
         public:
+            void Initialize(output_surface& surface);
             void Display(output_surface& surface);
             void Resize(output_surface& surface);
             void DrawBuildings(output_surface& surface) const;

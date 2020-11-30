@@ -11,15 +11,20 @@ static float RoadMetricWidth(Model::Road::Type type);
 static rgba_color RoadColor(Model::Road::Type type);
 static dashes RoadDashes(Model::Road::Type type);
 static point_2d ToPoint2D(const Model::Node& node) noexcept;
+
 namespace route_app {
     Renderer::Renderer(Model *model) {
         model_ = model;
-        Initialize();
-    }
-
-    void Renderer::Initialize() {
         BuildRoadReps();
         BuildLanduseBrushes();
+    }
+
+    void Renderer::Initialize(output_surface& surface) {
+        scale_ = static_cast<float>(std::max(surface.dimensions().x(), surface.dimensions().y()));
+        cout << "scale_: " << scale_ << endl;
+        pixels_in_meters_ = static_cast<float>(scale_ / model_->GetMetricScale());
+        cout << "pixels_in_meters_: " << pixels_in_meters_ << endl;
+        matrix_ = matrix_2d::create_scale({ scale_, -scale_ }) * matrix_2d::create_translate({ 0.f, static_cast<float>(surface.dimensions().y()) });
     }
 
     void Renderer::DrawLanduses(output_surface& surface) const {
@@ -66,6 +71,19 @@ namespace route_app {
     void Renderer::DrawHighways(output_surface& surface) const
     {
         auto ways = model_->GetWays().data();
+        //for (auto road : model_->GetRoads()) {
+        //    if (auto rep_it = road_reps_.find(road.type); rep_it != road_reps_.end()) {
+        //        auto& rep = rep_it->second;
+        //        auto& way = ways[road.way];
+        //        auto width = rep.metric_width > 0.f ? (rep.metric_width * pixels_in_meters_) : 1.f;
+        //        auto sp = stroke_props{ width, line_cap::round };
+        //        auto path = PathFromWay(way);
+        //        if (road.type != Model::Road::Cycleway && road.type != Model::Road::Footway) {
+        //            surface.stroke(railway_stroke_brush_, path, nullopt, road_outline_stroke_props_);
+        //        }
+        //        //surface.stroke(rep.brush, path, nullopt, sp, rep.dashes);
+        //    }
+        //}
         for (auto road : model_->GetRoads()) {
             if (auto rep_it = road_reps_.find(road.type); rep_it != road_reps_.end()) {
                 auto& rep = rep_it->second;
@@ -73,7 +91,6 @@ namespace route_app {
                 auto width = rep.metric_width > 0.f ? (rep.metric_width * pixels_in_meters_) : 1.f;
                 auto sp = stroke_props{ width, line_cap::round };
                 auto path = PathFromWay(way);
-                surface.stroke(railway_stroke_brush_, path, nullopt, stroke_props{ railway_outer_width_ * pixels_in_meters_ });
                 surface.stroke(rep.brush, path, nullopt, sp, rep.dashes);
             }
         }
@@ -132,27 +149,28 @@ namespace route_app {
     }
 
     void Renderer::Display(output_surface& surface) {
-        scale_ = static_cast<float>(std::max(surface.dimensions().x(), surface.dimensions().y()));
-        //cout << "scale_: " << scale_ << endl;
-        pixels_in_meters_ = static_cast<float>(scale_ / model_->GetMetricScale());
-        //cout << "pixels_in_meters_: " << pixels_in_meters_ << endl;
-        matrix_ =   matrix_2d::create_scale({ scale_, -scale_ }) *
-                    matrix_2d::create_translate({ 0.f, static_cast<float>(surface.dimensions().y()) });
         surface.paint(background_fill_brush_);
-        //surface.paint(mainColor);
         DrawLanduses(surface);
         DrawLeisure(surface);
         DrawWater(surface);
         DrawRailways(surface);
         DrawHighways(surface);
         DrawBuildings(surface);
+
+        auto pb = path_builder{};
+        pb.matrix(matrix_);
+        pb.new_figure(point_2d(static_cast<float>(model_->GetStartingPoint().x), static_cast<float>(model_->GetStartingPoint().y)));
+        pb.line(point_2d(static_cast<float>(model_->GetEndingPoint().x), static_cast<float>(model_->GetEndingPoint().y)));
+
+        auto path = interpreted_path{ pb };
+        surface.stroke(test_brush_, path, nullopt, route_outline_stroke_props_);
+
         DrawRoute(surface);
+
     }
 
     void Renderer::Resize(output_surface& surface) {
-        cout << "screen size changed" << endl;
-        cout << surface.display_dimensions().data().x << ", " << surface.display_dimensions().data().y << endl;
-        surface.dimensions(surface.display_dimensions().data());
+        surface.dimensions(surface.display_dimensions());
     }
 
     void Renderer::Release() {
@@ -199,8 +217,8 @@ static float RoadMetricWidth(Model::Road::Type type)
     case Model::Road::Residential:  return 2.5f;
     case Model::Road::Unclassified: return 2.5f;
     case Model::Road::Service:      return 1.f;
-    case Model::Road::Footway:      return 0.f;
-    case Model::Road::Cycleway:     return 0.5f;
+    case Model::Road::Footway:      return 0.5f;
+    case Model::Road::Cycleway:     return 0.75f;
     default:                        return 1.f;
     }
 }
@@ -223,7 +241,8 @@ static rgba_color RoadColor(Model::Road::Type type) {
 
 static dashes RoadDashes(Model::Road::Type type) {
     switch (type) {
-    case Model::Road::Footway:      return dashes{ 0.f, {1.f, 2.f} };
+    case Model::Road::Footway:      return dashes{ 5.f, {1.f, 3.f} };
+    //case Model::Road::Cycleway:     return dashes{ 0.f, {1.f, 2.f} };
     case Model::Road::Cycleway:     return dashes{ 0.f, {1.f, 2.f} };
     default:                        return dashes{};
     }    
