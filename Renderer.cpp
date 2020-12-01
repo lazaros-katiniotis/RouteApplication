@@ -71,23 +71,31 @@ namespace route_app {
     void Renderer::DrawHighways(output_surface& surface) const
     {
         auto ways = model_->GetWays().data();
-        //for (auto road : model_->GetRoads()) {
-        //    if (auto rep_it = road_reps_.find(road.type); rep_it != road_reps_.end()) {
-        //        auto& rep = rep_it->second;
-        //        auto& way = ways[road.way];
-        //        auto width = rep.metric_width > 0.f ? (rep.metric_width * pixels_in_meters_) : 1.f;
-        //        auto sp = stroke_props{ width, line_cap::round };
-        //        auto path = PathFromWay(way);
-        //        if (road.type != Model::Road::Cycleway && road.type != Model::Road::Footway) {
-        //            surface.stroke(railway_stroke_brush_, path, nullopt, road_outline_stroke_props_);
-        //        }
-        //        //surface.stroke(rep.brush, path, nullopt, sp, rep.dashes);
-        //    }
-        //}
         for (auto road : model_->GetRoads()) {
             if (auto rep_it = road_reps_.find(road.type); rep_it != road_reps_.end()) {
                 auto& rep = rep_it->second;
                 auto& way = ways[road.way];
+                auto width = rep.metric_width > 0.f ? (rep.metric_width * pixels_in_meters_) : 1.f;
+                auto sp = stroke_props{ width, line_cap::round };
+                auto path = PathFromWay(way);
+                if (road.type != Model::Road::Cycleway && road.type != Model::Road::Footway) {
+                    surface.stroke(railway_stroke_brush_, path, nullopt, road_outline_stroke_props_);
+                }
+                //surface.stroke(rep.brush, path, nullopt, sp, rep.dashes);
+            }
+        }
+        for (auto road : model_->GetRoads()) {
+            if (auto rep_it = road_reps_.find(road.type); rep_it != road_reps_.end()) {
+                auto& rep = rep_it->second;
+                auto& way = ways[road.way];
+                bool found = false;
+                for (auto index : way.nodes) {
+                    //cout << index << ", ";
+                    if (index == 178 || index == 163) {
+                        found = true;
+                    }
+                }
+                if (!found) continue;
                 auto width = rep.metric_width > 0.f ? (rep.metric_width * pixels_in_meters_) : 1.f;
                 auto sp = stroke_props{ width, line_cap::round };
                 auto path = PathFromWay(way);

@@ -51,6 +51,7 @@ namespace route_app {
         //RouteApplication.exe -b 20.75456,38.95622,20.75478,38.95636 -f test.xml
         //preveza: 20.7500 38.9571 20.7594 38.9628
         //fruengen: 17.95956 59.28393 17.96599  59.28651
+        //area near fruengen: 17.9519 59.2908 17.9594 59.2943
         string url = "https://api.openstreetmap.org";
         string api = "/api/0.6";
         string osm_bounding_box_query_prefix = "/map?bbox=";
@@ -195,14 +196,15 @@ namespace route_app {
     }
 
     void RouteApplication::FindRoute() {
+        PrintDebugMessage(APPLICATION_NAME, "", "Finding route...", true);
         Model::Node start;
         Model::Node end;
         //start.x = 0.6f;
         //start.y = 0.5f;
-        start.x = 0.2f;
-        start.y = 0.2f;
-        end.x = 0.5f;
-        end.y = 0.5f;
+        start.x = 0.133f;
+        start.y = 0.275f;
+        end.x = 0.65f;
+        end.y = 0.65f;
         model_->InitializePoint(model_->GetStartingPoint(), start);
         model_->InitializePoint(model_->GetEndingPoint(), end);
         model_->CreateRoute();

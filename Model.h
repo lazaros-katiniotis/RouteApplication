@@ -4,6 +4,7 @@
 #include <iostream>
 #include <pugixml.hpp>
 #include <vector>
+#include <map>
 #include <unordered_map>
 
 #include "Helper.h"
@@ -11,6 +12,7 @@
 using namespace std;
 using namespace pugi;
 using namespace route_app;
+
 namespace route_app {
     class Model {
     public:
@@ -19,11 +21,17 @@ namespace route_app {
         };
 
         struct Node : Element {
-            double x = 0.f;
-            double y = 0.f;
+            double x = 0.0f;
+            double y = 0.0f;
+            double f = 0.0f;
+            double h = 0.0f;
+
+            bool operator < (const Node& other) const { return f < other.f; }
+
             ~Node() {
-                x = 0.f;
-                y = 0.f;
+                x = 0.0f;
+                y = 0.0f;
+                f = 0.0f;
             }
         };
 
@@ -36,7 +44,6 @@ namespace route_app {
 
         struct Road {
             enum Type { Invalid, Unclassified, Service, Residential, Tertiary, Secondary, Primary, Trunk, Motorway, Footway, Cycleway };
-            int index;
             int way;
             Type type;
             string name;
@@ -75,11 +82,11 @@ namespace route_app {
         void InitializePoint(Node& point, Node& other);
         double inline EuclideanDistance(Node node, Node other);
         void CreateRoute();
-        Node& GetStartingPoint() { return start_; }
-        Node& GetEndingPoint() { return end_; }
-        const Way GetRoute() const noexcept { return route_; }
         const vector<Node>& GetNodes() const noexcept { return nodes_; }
         const vector<Way>& GetWays() const noexcept { return ways_; }
+        Node& GetStartingPoint() { return start_; }
+        Node& GetEndingPoint() { return end_; }
+        const Way& GetRoute() const { return route_; }
     private:
         xml_document doc_;
         double min_lat_ = 0.;
@@ -98,22 +105,43 @@ namespace route_app {
         vector<Road> roads_;
         vector<Node> nodes_;
         vector<Way> ways_;
+
         Way route_;
         Node start_;
         Node end_;
+        int start_node_index_;
+        int end_node_index_;
+        double* node_distance_from_start_;
+
+        struct NodeCompare {
+            bool operator() (double a, double b) const
+            {
+                return a < b;
+            }
+        };
+
+        map<int, Node, NodeCompare> open_list_;
+        unordered_map<int, bool> closed_list_;
+        unordered_map<int, vector<int>::iterator> iterators_;
+        unordered_map<int, vector<int>> way_nodes_;
+        bool CheckPreviousNode(vector<int>::iterator it, vector<int>::iterator begin);
+        bool CheckNextNode(vector<int>::iterator it, vector<int>::iterator end);
+
         void OpenDocument(AppData* data);
         void ParseData(AppData* data);
-        void CreateRoadGraph();
-        void AdjustCoordinates();
-        void FindNearestRoadNode(Node node);
-        void PrintDoc(const char* message, xml_document* doc, xml_parse_result* result);
-        void PrintData();
         void ParseBounds();
         Element* ParseNode(const xml_node& node, int& index);
         void ParseAttributes(const xml_node& node, Element* element, int index);
-
+        void PrintDoc(const char* message, xml_document* doc, xml_parse_result* result);
+        void PrintData();
+        void InitializePathfindingData();
+        void CreateRoadGraph();
+        int FindNearestRoadNode(Node node);
+        void StartAStarSearch();
+        void DiscoverNeighbourNodes(int current);
+        void AdjustCoordinates();
+        void Release();
     };
 }
-
 
 #endif
