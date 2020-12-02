@@ -85,8 +85,7 @@ namespace route_app {
         Node& GetStartingPoint() { return start_; }
         Node& GetEndingPoint() { return end_; }
         const Way& GetRoute() const { return route_; }
-
-        double inline EuclideanDistance(route_app::Model::Node node, route_app::Model::Node other) {
+        double inline EuclideanDistance(Model::Node node, Model::Node other) {
             return sqrt(pow(node.x - other.x, 2) + pow(node.y - other.y, 2));
         }
     private:
@@ -115,14 +114,19 @@ namespace route_app {
         int end_node_index_;
         double* node_distance_from_start_;
 
-        struct NodeCompare {
-            bool operator() (double a, double b) const
-            {
-                return a < b;
-            }
-        };
+        //struct NodeCompare {
+        //    bool operator() (int a, int b) const
+        //    {
+        //        return nodes_[a].f < nodes_[b].f;
+        //    }
+        //};
 
-        map<int, Node, NodeCompare> open_list_;
+        //bool node_cost_comp(const int a, const int b) {
+        //    return nodes_[a].f < nodes_[b].f;
+        //}
+
+        map<Node, int> open_list_;
+        //map<int, Node, decltype(comp)> open_list_(comp);
         unordered_map<int, bool> closed_list_;
         unordered_map<int, vector<int>::iterator> iterators_;
         unordered_map<int, vector<int>> way_nodes_;
