@@ -3,9 +3,6 @@
 #define ROUTE_APP_HELPER_H
 #include <iostream>
 
-#define QUERY_DATA_AS_STRUCT 1
-#define QUERY_DATA_AS_FILE 2
-
 using namespace std;
 
 namespace route_app {

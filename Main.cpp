@@ -251,7 +251,7 @@ namespace route_app {
 }
 
 int main(int argc, char** argv) {
-    RouteApplication *routeApp = new RouteApplication(argc, argv);
+    route_app::RouteApplication *routeApp = new route_app::RouteApplication(argc, argv);
     routeApp->HTTPRequest();
     routeApp->ModelData();
     routeApp->FindRoute();

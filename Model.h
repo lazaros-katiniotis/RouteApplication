@@ -11,7 +11,6 @@
 
 using namespace std;
 using namespace pugi;
-using namespace route_app;
 
 namespace route_app {
     class Model {
@@ -80,13 +79,16 @@ namespace route_app {
         auto& GetWaters() { return waters_; }
         void InitializePoint(Node& point, double x, double y);
         void InitializePoint(Node& point, Node& other);
-        double inline EuclideanDistance(Node node, Node other);
         void CreateRoute();
         const vector<Node>& GetNodes() const noexcept { return nodes_; }
         const vector<Way>& GetWays() const noexcept { return ways_; }
         Node& GetStartingPoint() { return start_; }
         Node& GetEndingPoint() { return end_; }
         const Way& GetRoute() const { return route_; }
+
+        double inline EuclideanDistance(route_app::Model::Node node, route_app::Model::Node other) {
+            return sqrt(pow(node.x - other.x, 2) + pow(node.y - other.y, 2));
+        }
     private:
         xml_document doc_;
         double min_lat_ = 0.;
@@ -138,7 +140,7 @@ namespace route_app {
         void CreateRoadGraph();
         int FindNearestRoadNode(Node node);
         void StartAStarSearch();
-        void DiscoverNeighbourNodes(int current);
+        vector<int> DiscoverNeighbourNodes(int current);
         void AdjustCoordinates();
         void Release();
     };
