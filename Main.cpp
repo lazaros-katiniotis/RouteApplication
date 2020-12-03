@@ -77,6 +77,7 @@ namespace route_app {
                 }
                 else if (string_view{ argv[i] } == "-f") {
                     sm = StorageMethod::FILE_STORAGE;
+                    cout << i << ", " << argc << endl;
                     if (++i < argc) {
                         osm_data_file = argv[i];
                         if (*osm_bounding_box_query == "") {
@@ -255,7 +256,7 @@ namespace route_app {
 
 int main(int argc, char** argv) {
     route_app::RouteApplication *routeApp = new route_app::RouteApplication(argc, argv);
-    //routeApp->HTTPRequest();
+    routeApp->HTTPRequest();
     routeApp->ModelData();
     routeApp->FindRoute();
     routeApp->Render();

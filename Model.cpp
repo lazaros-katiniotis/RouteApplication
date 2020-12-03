@@ -5,7 +5,7 @@
 #include <algorithm>
 #include "Model.h"
 #include "Helper.h"
-
+#include <chrono>
 //#include <fstream>
 //#include <iomanip>
 
@@ -224,9 +224,6 @@ void Model::ParseAttributes(const xml_node& node, int index) {
 					}
 				}
 			}
-			else {
-				cout << "Invalid road: " << index << endl;
-			}
 		} 
 		else if (category == "building") {
 			buildings_.emplace_back();
@@ -271,11 +268,44 @@ void Model::CreateRoute() {
 	//open_list_ = open_list;
 	end_node_index_ = FindNearestRoadNode(end_);
 
-	open_list_[nodes_[start_node_index_]] = start_node_index_;
-	cout << "Starting node: " << open_list_.begin()->second << endl;
-	cout << "Ending node: " << end_node_index_ << endl;
+	/*cout << "Starting node: " << open_list_.begin()->second << endl;
+	cout << "Ending node: " << end_node_index_ << endl;*/
+	long long avg = 0.0f;
+	std::chrono::steady_clock::time_point begin;
+	std::chrono::steady_clock::time_point end;
+	bool found = false;
+	int iterations = 1;
+	for (int i = 0; i < iterations; i++) {
 
-	StartAStarSearch();
+		for (auto it = nodes_.begin(); it != nodes_.end(); it++) {
+			it->f = 0.0f;
+			it->h = 0.0f;
+			it->parent = -1;
+		}
+
+		int size = nodes_.size();
+		node_distance_from_start_ = new double[size];
+		for (int i = 0; i < size; i++) {
+			node_distance_from_start_[i] = 0.0f;
+		}
+
+		begin = std::chrono::steady_clock::now();
+		open_list_[nodes_[start_node_index_]] = start_node_index_;
+		found = StartAStarSearch();
+		end = std::chrono::steady_clock::now();
+		open_list_.clear();
+		closed_list_.clear();
+		iterators_.clear();
+		way_nodes_.clear();
+		delete[] node_distance_from_start_;
+		std::cout << "Time difference #" << (i+1) << "= " << std::chrono::duration_cast<std::chrono::milliseconds> (end - begin).count() << "[ms]" << std::endl;
+		avg += (end - begin).count();
+	}
+
+	avg /= iterations;
+	std::cout << "Average time difference= " << std::chrono::duration_cast<std::chrono::milliseconds> (end - begin).count() << "[ms]" << std::endl;
+
+	
 	route_.nodes.clear();
 	Node node_it = nodes_[end_node_index_];
 	cout << end_node_index_ << endl;
@@ -290,11 +320,11 @@ void Model::CreateRoute() {
 
 
 void Model::InitializePathfindingData() {
-	int size = nodes_.size();
-	node_distance_from_start_ = new double[size];
-	for (int i = 0; i < size; i++) {
-		node_distance_from_start_[i] = 0.0f;
-	}
+	//int size = nodes_.size();
+	//node_distance_from_start_ = new double[size];
+	//for (int i = 0; i < size; i++) {
+	//	node_distance_from_start_[i] = 0.0f;
+	//}
 }
 
 void Model::CreateRoadGraph() {
@@ -345,60 +375,56 @@ int Model::FindNearestRoadNode(Node node) {
 	return closest_node_index;
 }
 
-void Model::StartAStarSearch() {
+bool Model::StartAStarSearch() {
 	while (!open_list_.empty()) {
 
-		cout << "All nodes in open_list_ are: " << endl;
-		for (auto it = open_list_.begin(); it != open_list_.end(); it++) {
-			cout << "node: " << it->second << ", current f: " << nodes_[it->second].f << endl;
-		}
-		cout << endl;
+		//cout << "All nodes in open_list_ are: " << endl;
+		//for (auto it = open_list_.begin(); it != open_list_.end(); it++) {
+		//	cout << "node: " << it->second << ", current f: " << nodes_[it->second].f << endl;
+		//}
+		//cout << endl;
 
 		int current = open_list_.begin()->second;
 		open_list_.erase(open_list_.begin());
 		double f = 0.0f;
 		double h = 0.0f;
-		double g = 0.0f;
 		double distance = 0.0f;
 		vector<int> new_neighbour_nodes = DiscoverNeighbourNodes(current);
 		for (auto it = new_neighbour_nodes.begin(); it != new_neighbour_nodes.end(); it++) {
 			distance = EuclideanDistance(nodes_[*it], nodes_[current]);
-			g = node_distance_from_start_[current] + distance;
-			node_distance_from_start_[*it] = g;
-			//nodes_[*it].h = EuclideanDistance(nodes_[*it], nodes_[end_node_index_]);
-			//nodes_[*it].f = node_distance_from_start_[*it] + nodes_[*it].h;
+			node_distance_from_start_[*it] = node_distance_from_start_[current] + distance;
 			h = EuclideanDistance(nodes_[*it], nodes_[end_node_index_]);
-			f = g + h;
+			f = node_distance_from_start_[*it] + h;
 
 			if (*it == end_node_index_) {
-				cout << "End node found!" << endl;
+				//cout << "End node found!" << endl;
 				nodes_[*it].f = f;
 				nodes_[*it].h = h;
 				nodes_[*it].parent = current;
-				return;
+				return true;
 			}
 
-			cout << "Checking Neighbour node: " << *it << ", updated f: " << f << endl;
+			//cout << "Checking Neighbour node: " << *it << ", updated f: " << f << endl;
 			bool already_in_open_list = false;
 			if (auto other_it = open_list_.find(nodes_[*it]); other_it != open_list_.end()) {
-				cout << "Found node " << other_it->second << " in open_list_" << endl;
+				//cout << "Found node " << other_it->second << " in open_list_" << endl;
 				already_in_open_list = true;
 				if (nodes_[other_it->second].f < f) {
-					cout << "Node " << other_it->second << " that was found in open_list_ has a lower f cost (";
-					cout << nodes_[other_it->second].f << ") than node: " << *it << " (" << f << ") has" << endl;
+					//cout << "Node " << other_it->second << " that was found in open_list_ has a lower f cost (";
+					//cout << nodes_[other_it->second].f << ") than node: " << *it << " (" << f << ") has" << endl;
 					continue;
 				}
 			}
 
 			if (auto other_it = closed_list_.find(*it); other_it != closed_list_.end()) {
-				cout << "Found node " << *other_it << " in closed_list_" << endl;
+				//cout << "Found node " << *other_it << " in closed_list_" << endl;
 				if (nodes_[*other_it].f < f) {
-					cout << "Node " << *other_it << " that was found in closed_list_ has a lower f cost (";
-					cout << nodes_[*other_it].f << ") than node: " << *it << " (" << f << ") has" << endl;
+					//cout << "Node " << *other_it << " that was found in closed_list_ has a lower f cost (";
+					//cout << nodes_[*other_it].f << ") than node: " << *it << " (" << f << ") has" << endl;
 					continue;
 				}
 			}
-			cout << "Adding node " << *it << " in open_list_." << endl;
+			//cout << "Adding node " << *it << " in open_list_." << endl;
 			nodes_[*it].f = f;
 			nodes_[*it].h = h;
 			nodes_[*it].parent = current;
@@ -410,17 +436,13 @@ void Model::StartAStarSearch() {
 		new_neighbour_nodes.clear();
 		closed_list_.insert(current);
 	}
-	open_list_.clear();
-	closed_list_.clear();
-	//iterators_.clear();
-	//way_nodes_.clear();
-	delete[] node_distance_from_start_;
-	cout << endl;
+	return false;
+	//cout << endl;
 }
 
 vector<int> Model::DiscoverNeighbourNodes(int current) {
 	vector<int> neighbour_nodes;
-	cout << "Searching neighbouring nodes from node: " << current << endl;
+	//cout << "Searching neighbouring nodes from node: " << current << endl;
 	//cout << "node '" << current << "' is found on the following roads: " << endl;
 
 	//for (auto it = iterators_.begin(); it != iterators_.end(); it++) {
@@ -458,11 +480,11 @@ vector<int> Model::DiscoverNeighbourNodes(int current) {
 			//cout << *it;
 			if (current == *it) {
 				if (CheckPreviousNode(it, nodes.begin())) {
-					cout << "found neighbour on road:\t" << index << "\tprev node:\t" << *std::prev(it) << endl;
+					//cout << "found neighbour on road:\t" << index << "\tprev node:\t" << *std::prev(it) << endl;
 					neighbour_nodes.emplace_back(*std::prev(it));
 				}
 				if (CheckNextNode(it, nodes.end())) {
-					cout << "found neighbour on road:\t" << index << "\tnext node:\t" << *std::next(it) << endl;
+					//cout << "found neighbour on road:\t" << index << "\tnext node:\t" << *std::next(it) << endl;
 					neighbour_nodes.emplace_back(*std::next(it));
 				}
 				break;
@@ -519,8 +541,8 @@ void Model::AdjustCoordinates() {
 	const auto earth_radius = 6378137.0;
 	const auto lat2ym = [&](double lat) { return log(tan(lat * deg_to_rad / 2 + pi / 4)) / 2 * earth_radius; };
 	const auto lon2xm = [&](double lon) { return lon * deg_to_rad / 2 * earth_radius; };
-	cout << "delta longtitude: " << (max_lon_ - min_lon_) << endl;
-	cout << "delta latitude: " << (max_lat_ - min_lat_) << endl;
+	//cout << "delta longtitude: " << (max_lon_ - min_lon_) << endl;
+	//cout << "delta latitude: " << (max_lat_ - min_lat_) << endl;
 	const auto dx = lon2xm(max_lon_) - lon2xm(min_lon_);
 	const auto dy = lat2ym(max_lat_) - lat2ym(min_lat_);
 	const auto min_x = lon2xm(min_lon_);
