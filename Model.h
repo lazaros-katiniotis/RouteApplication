@@ -104,8 +104,6 @@ namespace route_app {
         double* node_distance_from_start_;
         map<Node, int> open_list_;
         set<int> closed_list_;
-        unordered_map<int, vector<int>::iterator> iterators_;
-        unordered_map<int, vector<int>> way_nodes_;
 
         bool CheckPreviousNode(vector<int>::iterator it, vector<int>::iterator begin);
         bool CheckNextNode(vector<int>::iterator it, vector<int>::iterator end);

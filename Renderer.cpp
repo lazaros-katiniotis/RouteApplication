@@ -20,7 +20,9 @@ Renderer::Renderer(Model *model) {
 }
 
 void Renderer::Initialize(output_surface& surface) {
-    
+    scale_ = static_cast<float>(std::max(surface.dimensions().x(), surface.dimensions().y()));
+    pixels_in_meters_ = static_cast<float>(scale_ / model_->GetMetricScale());
+    matrix_ = matrix_2d::create_scale({ scale_, -scale_ }) * matrix_2d::create_translate({ 0.f, static_cast<float>(surface.dimensions().y()) });
 }
 
 void Renderer::DrawLanduses(output_surface& surface) const {
@@ -53,19 +55,15 @@ void Renderer::DrawWater(output_surface& surface) const {
     }
 }
 
-void Renderer::DrawBuildings(output_surface& surface) const
-{
+void Renderer::DrawBuildings(output_surface& surface) const {
     for (auto& building : model_->GetBuildings()) {
-        //cout << "building: " << &building << endl;
         auto path = PathFromMP(building);
-        //cout << "path: " << &path << endl;
         surface.fill(building_fill_brush_, path);
         surface.stroke(building_outline_brush_, path, std::nullopt, building_outline_stroke_props_);
     }
 }
 
-void Renderer::DrawHighways(output_surface& surface) const
-{
+void Renderer::DrawHighways(output_surface& surface) const {
     auto ways = model_->GetWays().data();
     for (auto road : model_->GetRoads()) {
         if (auto rep_it = road_reps_.find(road.type); rep_it != road_reps_.end()) {
@@ -84,14 +82,6 @@ void Renderer::DrawHighways(output_surface& surface) const
         if (auto rep_it = road_reps_.find(road.type); rep_it != road_reps_.end()) {
             auto& rep = rep_it->second;
             auto& way = ways[road.way];
-            //bool found = false;
-            //for (auto index : way.nodes) {
-            //    //cout << index << ", ";
-            //    if (index == 178 || index == 163) {
-            //        found = true;
-            //    }
-            //}
-            //if (!found) continue;
             auto width = rep.metric_width > 0.f ? (rep.metric_width * pixels_in_meters_) : 1.f;
             auto sp = stroke_props{ width, line_cap::round };
             auto path = PathFromWay(way);
@@ -136,13 +126,11 @@ interpreted_path Renderer::PathFromMP(const Model::Multipolygon& mp) const {
         pb.new_figure(ToPoint2D(nodes[way.nodes.front()]));
         for (auto it = ++way.nodes.begin(); it != end(way.nodes); ++it) {
             pb.line(ToPoint2D(nodes[*it]));
-            //cout << *it << ": " << &nodes[*it] << endl;
         }
         pb.close_figure();
     };
 
     for (auto way_num : mp.outer) {
-        //cout << &ways[way_num] << endl;
         create_path(ways[way_num]);
     }
 
@@ -154,12 +142,6 @@ interpreted_path Renderer::PathFromMP(const Model::Multipolygon& mp) const {
 }
 
 void Renderer::Display(output_surface& surface) {
-    scale_ = static_cast<float>(std::max(surface.dimensions().x(), surface.dimensions().y()));
-    //cout << "scale_: " << scale_ << endl;
-    pixels_in_meters_ = static_cast<float>(scale_ / model_->GetMetricScale());
-    //cout << "pixels_in_meters_: " << pixels_in_meters_ << endl;
-    matrix_ = matrix_2d::create_scale({ scale_, -scale_ }) * matrix_2d::create_translate({ 0.f, static_cast<float>(surface.dimensions().y()) });
-
     surface.paint(background_fill_brush_);
     DrawLanduses(surface);
     DrawLeisure(surface);
@@ -182,6 +164,7 @@ void Renderer::Display(output_surface& surface) {
 
 void Renderer::Resize(output_surface& surface) {
     surface.dimensions(surface.display_dimensions());
+    Initialize(surface);
 }
 
 void Renderer::Release() {
@@ -192,8 +175,7 @@ Renderer::~Renderer() {
     Release();
 }
 
-void Renderer::BuildRoadReps()
-{
+void Renderer::BuildRoadReps() {
     using R = Model::Road;
     auto types = { R::Motorway, R::Trunk, R::Primary,  R::Secondary, R::Tertiary,
         R::Residential, R::Service, R::Unclassified, R::Footway, R::Cycleway};
