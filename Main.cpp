@@ -194,11 +194,11 @@ namespace route_app {
         Model::Node start;
         Model::Node end;
 
-        start.x = 0.1f;
-        start.y = 0.1f;
+        start.x = 0.15f;
+        start.y = 0.15f;
 
-        end.x = 0.8f;
-        end.y = 0.8f;
+        end.x = 0.6f;
+        end.y = 0.6f;
 
         model_->InitializePoint(model_->GetStartingPoint(), start);
         model_->InitializePoint(model_->GetEndingPoint(), end);

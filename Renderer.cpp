@@ -141,6 +141,29 @@ interpreted_path Renderer::PathFromMP(const Model::Multipolygon& mp) const {
     return interpreted_path{ pb };
 }
 
+void Renderer::DrawCircle(output_surface& surface, const Model::Node& point, float radius) const {
+    auto pb = path_builder{};
+    pb.matrix(matrix_);
+    //pb.new_figure(  point_2d(static_cast<float>(point.x), static_cast<float>(point.y)));
+    pb.cubic_curve(point_2d(static_cast<float>(point.x - radius), static_cast<float>(point.y)),
+        point_2d(static_cast<float>(point.x - radius), static_cast<float>(point.y + radius)),
+        point_2d(static_cast<float>(point.x), static_cast<float>(point.y + radius)));
+
+    pb.cubic_curve(point_2d(static_cast<float>(point.x), static_cast<float>(point.y + radius)),
+        point_2d(static_cast<float>(point.x + radius), static_cast<float>(point.y + radius)),
+        point_2d(static_cast<float>(point.x + radius), static_cast<float>(point.y)));
+
+    pb.cubic_curve(point_2d(static_cast<float>(point.x + radius), static_cast<float>(point.y)),
+        point_2d(static_cast<float>(point.x + radius), static_cast<float>(point.y - radius)),
+        point_2d(static_cast<float>(point.x), static_cast<float>(point.y - radius)));
+
+    pb.cubic_curve(point_2d(static_cast<float>(point.x), static_cast<float>(point.y - radius)),
+        point_2d(static_cast<float>(point.x - radius), static_cast<float>(point.y - radius)),
+        point_2d(static_cast<float>(point.x - radius), static_cast<float>(point.y)));
+    auto path = interpreted_path{ pb };
+    surface.stroke(test_brush_, path, nullopt, route_outline_stroke_props_);
+}
+
 void Renderer::Display(output_surface& surface) {
     surface.paint(background_fill_brush_);
     DrawLanduses(surface);
@@ -149,17 +172,9 @@ void Renderer::Display(output_surface& surface) {
     DrawRailways(surface);
     DrawHighways(surface);
     DrawBuildings(surface);
-
-    auto pb = path_builder{};
-    pb.matrix(matrix_);
-    pb.new_figure(point_2d(static_cast<float>(model_->GetStartingPoint().x), static_cast<float>(model_->GetStartingPoint().y)));
-    pb.line(point_2d(static_cast<float>(model_->GetEndingPoint().x), static_cast<float>(model_->GetEndingPoint().y)));
-
-    auto path = interpreted_path{ pb };
-    surface.stroke(test_brush_, path, nullopt, route_outline_stroke_props_);
-
     DrawRoute(surface);
-
+    DrawCircle(surface, model_->GetStartingPoint(), 0.01f);
+    DrawCircle(surface, model_->GetEndingPoint(), 0.01f);
 }
 
 void Renderer::Resize(output_surface& surface) {
