@@ -64,7 +64,9 @@ namespace route_app {
         //interval 0.00333333
         //-b 20.74694 38.95525 20.75073 38.95908
         //-b 17.9519 59.2908 17.9594 59.2943
-
+        //20.70254 38.99516 20.71087 38.99968 mytikas
+        //20.74454 38.95902 20.74926 38.96161 preveza small
+        //20.7639 38.9720 20.7683 38.9772 psathaki
         if (argc > 1) {
             for (int i = 1; i < argc; ++i) {
                 if (string_view{ argv[i] } == "-b") {
@@ -199,12 +201,13 @@ namespace route_app {
         PrintDebugMessage(APPLICATION_NAME, "", "Finding route...", true);
         Model::Node start;
         Model::Node end;
-        //start.x = 0.6f;
-        //start.y = 0.5f;
-        start.x = 0.133f;
-        start.y = 0.275f;
-        end.x = 0.65f;
-        end.y = 0.65f;
+
+        start.x = 0.1f;
+        start.y = 0.1f;
+
+        end.x = 0.8f;
+        end.y = 0.8f;
+
         model_->InitializePoint(model_->GetStartingPoint(), start);
         model_->InitializePoint(model_->GetEndingPoint(), end);
         model_->CreateRoute();
@@ -226,7 +229,7 @@ namespace route_app {
 
     void RouteApplication::DisplayMap() {
         auto display = io2d::output_surface{ 600, 600, io2d::format::argb32, io2d::scaling::none, io2d::refresh_style::fixed, 30 };
-        renderer_->Initialize(display);
+        //renderer_->Initialize(display);
 
         display.size_change_callback([&](io2d::output_surface& surface) {
             renderer_->Resize(surface);
@@ -252,7 +255,7 @@ namespace route_app {
 
 int main(int argc, char** argv) {
     route_app::RouteApplication *routeApp = new route_app::RouteApplication(argc, argv);
-    routeApp->HTTPRequest();
+    //routeApp->HTTPRequest();
     routeApp->ModelData();
     routeApp->FindRoute();
     routeApp->Render();

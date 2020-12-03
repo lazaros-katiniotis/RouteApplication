@@ -20,11 +20,7 @@ Renderer::Renderer(Model *model) {
 }
 
 void Renderer::Initialize(output_surface& surface) {
-    scale_ = static_cast<float>(std::max(surface.dimensions().x(), surface.dimensions().y()));
-    cout << "scale_: " << scale_ << endl;
-    pixels_in_meters_ = static_cast<float>(scale_ / model_->GetMetricScale());
-    cout << "pixels_in_meters_: " << pixels_in_meters_ << endl;
-    matrix_ = matrix_2d::create_scale({ scale_, -scale_ }) * matrix_2d::create_translate({ 0.f, static_cast<float>(surface.dimensions().y()) });
+    
 }
 
 void Renderer::DrawLanduses(output_surface& surface) const {
@@ -88,14 +84,14 @@ void Renderer::DrawHighways(output_surface& surface) const
         if (auto rep_it = road_reps_.find(road.type); rep_it != road_reps_.end()) {
             auto& rep = rep_it->second;
             auto& way = ways[road.way];
-            bool found = false;
-            for (auto index : way.nodes) {
-                //cout << index << ", ";
-                if (index == 178 || index == 163) {
-                    found = true;
-                }
-            }
-            if (!found) continue;
+            //bool found = false;
+            //for (auto index : way.nodes) {
+            //    //cout << index << ", ";
+            //    if (index == 178 || index == 163) {
+            //        found = true;
+            //    }
+            //}
+            //if (!found) continue;
             auto width = rep.metric_width > 0.f ? (rep.metric_width * pixels_in_meters_) : 1.f;
             auto sp = stroke_props{ width, line_cap::round };
             auto path = PathFromWay(way);
@@ -158,6 +154,12 @@ interpreted_path Renderer::PathFromMP(const Model::Multipolygon& mp) const {
 }
 
 void Renderer::Display(output_surface& surface) {
+    scale_ = static_cast<float>(std::max(surface.dimensions().x(), surface.dimensions().y()));
+    //cout << "scale_: " << scale_ << endl;
+    pixels_in_meters_ = static_cast<float>(scale_ / model_->GetMetricScale());
+    //cout << "pixels_in_meters_: " << pixels_in_meters_ << endl;
+    matrix_ = matrix_2d::create_scale({ scale_, -scale_ }) * matrix_2d::create_translate({ 0.f, static_cast<float>(surface.dimensions().y()) });
+
     surface.paint(background_fill_brush_);
     DrawLanduses(surface);
     DrawLeisure(surface);

@@ -5,6 +5,7 @@
 #include <pugixml.hpp>
 #include <vector>
 #include <map>
+#include <set>
 #include <unordered_map>
 
 #include "Helper.h"
@@ -15,30 +16,18 @@ using namespace pugi;
 namespace route_app {
     class Model {
     public:
-        struct Element {
-            virtual ~Element();
-        };
-
-        struct Node : Element {
+        struct Node {
+            int parent = -1;
             double x = 0.0f;
             double y = 0.0f;
             double f = 0.0f;
             double h = 0.0f;
 
             bool operator < (const Node& other) const { return f < other.f; }
-
-            ~Node() {
-                x = 0.0f;
-                y = 0.0f;
-                f = 0.0f;
-            }
         };
 
-        struct Way : Element {
+        struct Way {
             vector<int> nodes;
-            ~Way() {
-                nodes.clear();
-            }
         };
 
         struct Road {
@@ -85,7 +74,7 @@ namespace route_app {
         Node& GetStartingPoint() { return start_; }
         Node& GetEndingPoint() { return end_; }
         const Way& GetRoute() const { return route_; }
-        double inline EuclideanDistance(Model::Node node, Model::Node other) {
+        double inline EuclideanDistance(Model::Node const node, Model::Node const other) {
             return sqrt(pow(node.x - other.x, 2) + pow(node.y - other.y, 2));
         }
     private:
@@ -113,31 +102,19 @@ namespace route_app {
         int start_node_index_;
         int end_node_index_;
         double* node_distance_from_start_;
-
-        //struct NodeCompare {
-        //    bool operator() (int a, int b) const
-        //    {
-        //        return nodes_[a].f < nodes_[b].f;
-        //    }
-        //};
-
-        //bool node_cost_comp(const int a, const int b) {
-        //    return nodes_[a].f < nodes_[b].f;
-        //}
-
         map<Node, int> open_list_;
-        //map<int, Node, decltype(comp)> open_list_(comp);
-        unordered_map<int, bool> closed_list_;
-        unordered_map<int, vector<int>::iterator> iterators_;
-        unordered_map<int, vector<int>> way_nodes_;
+        set<int> closed_list_;
+        //unordered_map<int, vector<int>::iterator> iterators_;
+        //unordered_map<int, vector<int>> way_nodes_;
+
         bool CheckPreviousNode(vector<int>::iterator it, vector<int>::iterator begin);
         bool CheckNextNode(vector<int>::iterator it, vector<int>::iterator end);
 
         void OpenDocument(AppData* data);
         void ParseData(AppData* data);
         void ParseBounds();
-        Element* ParseNode(const xml_node& node, int& index);
-        void ParseAttributes(const xml_node& node, Element* element, int index);
+        void ParseNode(const xml_node& node, int& index);
+        void ParseAttributes(const xml_node& node, int index);
         void PrintDoc(const char* message, xml_document* doc, xml_parse_result* result);
         void PrintData();
         void InitializePathfindingData();

@@ -13,9 +13,6 @@
 using namespace pugi;
 using namespace route_app;
 
-Model::Element::~Element() {
-}
-
 static Model::Road::Type StringToRoadType(string_view type) {
 	if (type == "motorway")        return Model::Road::Motorway;
 	if (type == "motorway_link")   return Model::Road::Motorway;
@@ -141,19 +138,17 @@ void Model::ParseData(AppData* data) {
 	ParseBounds();
 
 	int index;
-	Element* new_node;
 	PrintDebugMessage(APPLICATION_NAME, "Model", "Parsing nodes...", false);
 	for (const xpath_node& node : doc_.select_nodes("/osm/node")) {
-		new_node = ParseNode(node.node(), index);
+		ParseNode(node.node(), index);
 	}
 
-	Element* new_way;
 	PrintDebugMessage(APPLICATION_NAME, "Model", "Parsing ways...", false);
 	for (const xpath_node& way : doc_.select_nodes("/osm/way")) {
-		new_way = ParseNode(way.node(), index);
+		ParseNode(way.node(), index);
 
 		for (const xpath_node& child : way.node().children()) {
-			ParseAttributes(child.node(), new_way, index);
+			ParseAttributes(child.node(), index);
 		}
 	}
 }
@@ -172,7 +167,7 @@ void Model::ParseBounds() {
 	}
 }
 
-Model::Element* Model::ParseNode(const xml_node& node, int &index) {
+void Model::ParseNode(const xml_node& node, int &index) {
 	auto name = string_view{ node.name() };
 	auto value = string_view{ node.value() };
 
@@ -183,26 +178,26 @@ Model::Element* Model::ParseNode(const xml_node& node, int &index) {
 		nodes_.emplace_back();
 		nodes_.back().x = node.attribute("lon").as_double();
 		nodes_.back().y = node.attribute("lat").as_double();
-		return dynamic_cast<Element*>(&nodes_.back());
+		nodes_.back().f = 0.0f;
+		nodes_.back().h = 0.0f;
+		nodes_.back().parent = -1;
+
 	}
 	else if (name == "way") {
 		string id = node.attribute("id").as_string();
 		index = (int)ways_.size();
 		way_id_to_number_[id] = index;
 		ways_.emplace_back();
-		return dynamic_cast<Element*>(&ways_.back());
 	}
-	return NULL;
 }
 
-void Model::ParseAttributes(const xml_node& node, Element* element, int index) {
+void Model::ParseAttributes(const xml_node& node, int index) {
 	string_view name = string_view{ node.name() };
 
 	if (name == "nd") {
 		auto ref = node.attribute("ref").as_string();
 		if (auto it = node_id_to_number_.find(ref); it != std::end(node_id_to_number_)) {
-			Way* way = dynamic_cast<Way*>(element);
-			way->nodes.emplace_back(it->second);
+			ways_.back().nodes.emplace_back(it->second);
 		}
 	}
 	else if (name == "tag") {
@@ -280,15 +275,22 @@ void Model::CreateRoute() {
 	cout << "Starting node: " << open_list_.begin()->second << endl;
 	cout << "Ending node: " << end_node_index_ << endl;
 
-	//open_list_[177] = nodes_[177];
-	//open_list_[177].f = 0.6929440;
-
 	StartAStarSearch();
+	route_.nodes.clear();
+	Node node_it = nodes_[end_node_index_];
+	cout << end_node_index_ << endl;
+	route_.nodes.emplace_back(end_node_index_);
+
+	while (node_it.parent != -1) {
+		cout << node_it.parent << endl;
+		route_.nodes.emplace_back(node_it.parent);
+		node_it = nodes_[node_it.parent];
+	}
 }
 
 
 void Model::InitializePathfindingData() {
-	int size = node_number_to_road_numbers.size();
+	int size = nodes_.size();
 	node_distance_from_start_ = new double[size];
 	for (int i = 0; i < size; i++) {
 		node_distance_from_start_[i] = 0.0f;
@@ -339,133 +341,160 @@ int Model::FindNearestRoadNode(Node node) {
 			}
 		}
 	}
-	route_.nodes.emplace_back();
-	route_.nodes.back() = closest_node_index;
+	route_.nodes.emplace_back(closest_node_index);
 	return closest_node_index;
 }
 
 void Model::StartAStarSearch() {
-
-	//bool(*compare)(double, double) = CompareNodeCost;
-	//std::map<int, Node, bool(*)(double, double)> ol_(compare);
-	//open_list_
-
-	//for (auto it = open_list_.begin(); it != open_list_.end(); it++) {
-
-	//}
-	vector<int> all_neighbour_nodes;
 	while (!open_list_.empty()) {
+
+		cout << "All nodes in open_list_ are: " << endl;
+		for (auto it = open_list_.begin(); it != open_list_.end(); it++) {
+			cout << "node: " << it->second << ", current f: " << nodes_[it->second].f << endl;
+		}
+		cout << endl;
 
 		int current = open_list_.begin()->second;
 		open_list_.erase(open_list_.begin());
-
+		double f = 0.0f;
+		double h = 0.0f;
+		double g = 0.0f;
+		double distance = 0.0f;
 		vector<int> new_neighbour_nodes = DiscoverNeighbourNodes(current);
-		//all_neighbour_nodes.reserve(all_neighbour_nodes.size() + new_neighbour_nodes.size()); // preallocate memory
-		//all_neighbour_nodes.insert(all_neighbour_nodes.end(), all_neighbour_nodes.begin(), all_neighbour_nodes.end());
-		//all_neighbour_nodes.insert(all_neighbour_nodes.end(), new_neighbour_nodes.begin(), new_neighbour_nodes.end());
-		all_neighbour_nodes.insert(all_neighbour_nodes.end(), new_neighbour_nodes.begin(), new_neighbour_nodes.end());
-		cout << "All neighbours are: " << endl;
-		for (auto it = all_neighbour_nodes.begin(); it != all_neighbour_nodes.end(); it++) {
-			cout << "Neighbour node: " << *it << ", current f: " << nodes_[*it].f << endl;
-		}
-		cout << endl;
-		for (auto it = all_neighbour_nodes.begin(); it != all_neighbour_nodes.end(); it++) {
-			if (*it == end_node_index_) {
-				cout << "End node found!" << endl;
-				return;
-			}
-			node_distance_from_start_[*it] = node_distance_from_start_[current] + EuclideanDistance(nodes_[*it], nodes_[current]);
+		for (auto it = new_neighbour_nodes.begin(); it != new_neighbour_nodes.end(); it++) {
+			distance = EuclideanDistance(nodes_[*it], nodes_[current]);
+			g = node_distance_from_start_[current] + distance;
+			node_distance_from_start_[*it] = g;
 			//nodes_[*it].h = EuclideanDistance(nodes_[*it], nodes_[end_node_index_]);
 			//nodes_[*it].f = node_distance_from_start_[*it] + nodes_[*it].h;
-			double h = EuclideanDistance(nodes_[*it], nodes_[end_node_index_]);
-			double f = node_distance_from_start_[*it] + h;
+			h = EuclideanDistance(nodes_[*it], nodes_[end_node_index_]);
+			f = g + h;
+
+			if (*it == end_node_index_) {
+				cout << "End node found!" << endl;
+				nodes_[*it].f = f;
+				nodes_[*it].h = h;
+				nodes_[*it].parent = current;
+				return;
+			}
 
 			cout << "Checking Neighbour node: " << *it << ", updated f: " << f << endl;
-
+			bool already_in_open_list = false;
 			if (auto other_it = open_list_.find(nodes_[*it]); other_it != open_list_.end()) {
-				cout << "Found node " << other_it->second << " in open_list_." << endl;
-
-				if (other_it->first.f < f) {
-					//cout << "Neighbour node: " << other_it->first << " that was found in open_list_ has lower f cost"
+				cout << "Found node " << other_it->second << " in open_list_" << endl;
+				already_in_open_list = true;
+				if (nodes_[other_it->second].f < f) {
+					cout << "Node " << other_it->second << " that was found in open_list_ has a lower f cost (";
+					cout << nodes_[other_it->second].f << ") than node: " << *it << " (" << f << ") has" << endl;
 					continue;
 				}
 			}
 
 			if (auto other_it = closed_list_.find(*it); other_it != closed_list_.end()) {
-				cout << "Found node " << other_it->first << " in closed list." << endl;
-				if (nodes_[other_it->first].f < f) {
+				cout << "Found node " << *other_it << " in closed_list_" << endl;
+				if (nodes_[*other_it].f < f) {
+					cout << "Node " << *other_it << " that was found in closed_list_ has a lower f cost (";
+					cout << nodes_[*other_it].f << ") than node: " << *it << " (" << f << ") has" << endl;
 					continue;
 				}
 			}
+			cout << "Adding node " << *it << " in open_list_." << endl;
 			nodes_[*it].f = f;
 			nodes_[*it].h = h;
+			nodes_[*it].parent = current;
+			if (already_in_open_list) {
+				open_list_.erase(nodes_[*it]);
+			}
 			open_list_[nodes_[*it]] = *it;
 		}
-		all_neighbour_nodes.clear();
-		closed_list_[current] = true;
+		new_neighbour_nodes.clear();
+		closed_list_.insert(current);
 	}
+	open_list_.clear();
+	closed_list_.clear();
+	//iterators_.clear();
+	//way_nodes_.clear();
+	delete[] node_distance_from_start_;
+	cout << endl;
 }
 
 vector<int> Model::DiscoverNeighbourNodes(int current) {
+	vector<int> neighbour_nodes;
 	cout << "Searching neighbouring nodes from node: " << current << endl;
 	//cout << "node '" << current << "' is found on the following roads: " << endl;
 
-	for (auto it = iterators_.begin(); it != iterators_.end(); it++) {
-		if (CheckPreviousNode(it->second, way_nodes_[it->first].begin())) {
-			if (*std::prev(it->second) == current) {
-				iterators_[it->first]--;
-			}
-		}
-		if (CheckNextNode(it->second, way_nodes_[it->first].end())) {
-			if (*std::next(it->second) == current) {
-				iterators_[it->first]++;
-			}
-		}
-	}
+	//for (auto it = iterators_.begin(); it != iterators_.end(); it++) {
+	//	if (CheckPreviousNode(it->second, way_nodes_[it->first].begin())) {
+	//		if (*std::prev(it->second) == current) {
+	//			iterators_[it->first]--;
+	//		}
+	//	}
+	//	if (CheckNextNode(it->second, way_nodes_[it->first].end())) {
+	//		if (*std::next(it->second) == current) {
+	//			iterators_[it->first]++;
+	//		}
+	//	}
+	//}
 
 	auto& roads = node_number_to_road_numbers[current];
 	for (auto road = roads.begin(); road != roads.end(); road++) {
 		int index = *road;
-		if (auto it = iterators_.find(index); it != iterators_.end()) {
-			cout << "Road " << index << " is already being iterated..." << endl;
-			continue;
-		}
+		//if (auto it = iterators_.find(index); it != iterators_.end()) {
+		//	cout << "Road " << index << " is already being iterated..." << endl;
+		//	continue;
+		//}
 		int way = roads_[index].way;
-		way_nodes_[index] = ways_[way].nodes;
+		//way_nodes_[index] = ways_[way].nodes;
 
 		//cout << "road: " << (int)*road << endl;
 		//cout << "nodes on road: " << endl;
-		for (auto it = way_nodes_[index].begin(); it != way_nodes_[index].end(); it++) {
+		auto nodes = ways_[way].nodes;
+		for (auto it = nodes.begin(); it != nodes.end(); it++) {
 
-			if (CheckPreviousNode(it, way_nodes_[index].begin())) {
-				//cout << "(previous node: " << *std::prev(it) << ") - ";
-			}
+			//if (CheckPreviousNode(it, way_nodes_[index].begin())) {
+			//	//cout << "(previous node: " << *std::prev(it) << ") - ";
+			//}
 
 			//cout << *it;
 			if (current == *it) {
-				iterators_[index] = it;
+				if (CheckPreviousNode(it, nodes.begin())) {
+					cout << "found neighbour on road:\t" << index << "\tprev node:\t" << *std::prev(it) << endl;
+					neighbour_nodes.emplace_back(*std::prev(it));
+				}
+				if (CheckNextNode(it, nodes.end())) {
+					cout << "found neighbour on road:\t" << index << "\tnext node:\t" << *std::next(it) << endl;
+					neighbour_nodes.emplace_back(*std::next(it));
+				}
 				break;
 			}
 
-			if (CheckNextNode(it, way_nodes_[index].end())) {
-				//cout << " - (next node: " << *std::next(it) << ") ";
-			}
+			//if (CheckNextNode(it, way_nodes_[index].end())) {
+			//	//cout << " - (next node: " << *std::next(it) << ") ";
+			//}
 			//cout << endl;
 		}
+		//if (CheckPreviousNode(iterators_[index], way_nodes_[index].begin())) {
+		//	cout << "found neighbour on road:\t" << index << "\tprev node:\t" << *std::prev(iterators_[index]) << endl;
+		//	neighbour_nodes.emplace_back(*std::prev(iterators_[index]));
+		//}
+		//if (CheckNextNode(iterators_[index], way_nodes_[index].end())) {
+		//	cout << "found neighbour on road:\t" << index << "\tnext node:\t" << *std::next(iterators_[index]) << endl;
+		//	neighbour_nodes.emplace_back(*std::next(iterators_[index]));
+		//}
 	}
-	vector<int> neighbour_nodes;
-	for (auto it = iterators_.begin(); it != iterators_.end(); it++) {
-		if (CheckPreviousNode(it->second, way_nodes_[it->first].begin())) {
-			cout << "found neighbour, previous node: " << *std::prev(it->second);
-			cout << " on road: " << it->first << endl;
-			neighbour_nodes.emplace_back(*std::prev(it->second));
-		}
-		if (CheckNextNode(it->second, way_nodes_[it->first].end())) {
-			cout << "found neighbour, next node: " << *std::next(it->second);
-			neighbour_nodes.emplace_back(*std::next(it->second));
-			cout << " on road: " << it->first << endl;
-		}
-	}
+	//vector<int> neighbour_nodes;
+	//for (auto it = iterators_.begin(); it != iterators_.end(); it++) {
+	//	if (CheckPreviousNode(it->second, way_nodes_[it->first].begin())) {
+	//		cout << "found neighbour, previous node: " << *std::prev(it->second);
+	//		cout << " on road: " << it->first << endl;
+	//		neighbour_nodes.emplace_back(*std::prev(it->second));
+	//	}
+	//	if (CheckNextNode(it->second, way_nodes_[it->first].end())) {
+	//		cout << "found neighbour, next node: " << *std::next(it->second);
+	//		neighbour_nodes.emplace_back(*std::next(it->second));
+	//		cout << " on road: " << it->first << endl;
+	//	}
+	//}
 	return neighbour_nodes;
 }
 
@@ -515,8 +544,7 @@ void Model::InitializePoint(Node& point, Node& other) {
 }
 
 void Model::Release() {
-	int size = node_number_to_road_numbers.size();
-	delete[] node_distance_from_start_;
+
 }
 
 Model::~Model() {
