@@ -7,6 +7,7 @@
 
 #include "Helper.h"
 #include "HTTPHandler.h"
+#include "ArgumentParser.h"
 #include "Renderer.h"
 #include "Model.h"
 
@@ -17,10 +18,11 @@ namespace route_app {
     
     class RouteApplication {
     private:
-        AppData *data_;
-        HTTPHandler *handler_;
-        Model *model_;
-        Renderer *renderer_;
+        AppData *data_ = NULL;
+        HTTPHandler *handler_ = NULL;
+        Model *model_ = NULL;
+        Renderer *renderer_ = NULL;
+        ArgumentParser* parser_ = NULL;
         void ParseCommandLineArguments(int argc, char** argv);
         bool CreateQueryFromBoundingBox(int argc, char** argv, int& index, string* bounding_box_query);
         bool CreateQueryFromPoint(int argc, char** argv, int& index, string* bounding_box_query);
@@ -58,6 +60,14 @@ namespace route_app {
         const char* file_mode = "w";
         bool successfully_parsed_arguments = false;
 
+        parser_ = new ArgumentParser();
+
+        for (int i = 1; i < argc; i++) {
+            parser_->ParseArgument(string_view{ argv[i] });
+        }
+
+        cout << parser_->GetQuery() << endl;
+
         if (argc > 1) {
             for (int i = 1; i < argc; ++i) {
                 if (string_view{ argv[i] } == "-b") {
@@ -92,6 +102,7 @@ namespace route_app {
         InitializeAppData(sm, osm_data_file, file_mode);
         InitializeHTTPRequestQuery(url, api, osm_bounding_box_query_prefix + *osm_bounding_box_query);
         delete osm_bounding_box_query;
+        delete parser_;
     }
 
     bool RouteApplication::CreateQueryFromBoundingBox(int argc, char** argv, int& index, string* bounding_box_query) {
@@ -239,17 +250,23 @@ namespace route_app {
             delete data_->query_data->memory;
             delete data_->query_data;
         }
-        delete handler_;
-        delete model_;
-        delete renderer_;
+        if (handler_ != NULL) {
+            delete handler_;
+        }
+        if (model_ != NULL) {
+            delete model_;
+        }
+        if (renderer_ != NULL) {
+            delete renderer_;
+        }
     }
 }
 
 int main(int argc, char** argv) {
     route_app::RouteApplication *routeApp = new route_app::RouteApplication(argc, argv);
-    routeApp->HTTPRequest();
-    routeApp->ModelData();
-    routeApp->FindRoute();
-    routeApp->Render();
+    //routeApp->HTTPRequest();
+    //routeApp->ModelData();
+    //routeApp->FindRoute();
+    //routeApp->Render();
     delete routeApp;
 }
