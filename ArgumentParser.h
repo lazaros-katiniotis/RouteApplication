@@ -15,7 +15,7 @@ namespace route_app {
 		};
 		ArgumentParser();
 		~ArgumentParser();
-		void ParseArgument(std::string_view arg);
+		ParserState ParseArgument(std::string_view arg);
 		std::string GetQuery();
 	private:
 		class StateTable {
@@ -48,8 +48,9 @@ namespace route_app {
 		std::string query_;
 		void Initialize();
 		void CreateStateTable();
-		void UpdateCurrentState(std::string_view arg);
-		void UpdatePreviousState();
+		void UpdateInputState(std::string_view arg);
+		void UpdateParserState(std::string_view arg);
+		void UpdatePreviousStates();
 		void Release();
 	public:
 		StateTable& GetStateTable() const { return *stateTable_; }
