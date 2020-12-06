@@ -3,6 +3,7 @@
 #define ROUTE_APP_ARGUMENT_PARSER_H
 
 #include <iostream>
+#include "Model.h"
 
 namespace route_app {
 	class ArgumentParser {
@@ -16,7 +17,7 @@ namespace route_app {
 		ArgumentParser();
 		~ArgumentParser();
 		ParserState ParseArgument(std::string_view arg);
-		std::string GetQuery();
+		std::string GetBoundQuery() const;
 	private:
 		class StateTable {
 		private:
@@ -39,17 +40,27 @@ namespace route_app {
 			size_t GetHeight() const { return height_; }
 		};
 		StateTable* stateTable_;
+		ParserState current_parser_state_;
+		ParserState previous_parser_state_;
+		InputState current_input_state_;
+		InputState previous_input_state_;
 		const int bound_coordinates_ = 4;
 		const int point_coordinates_ = 2;
-		ParserState currentParserState_;
-		ParserState previousParserState_;
-		InputState currentInputState_;
-		InputState previousInputState_;
-		std::string query_;
+		int number_of_coordinates_to_parse;
+		bool is_parsing_coordinates;
+		InputState parsing_type_;
+		Model::Node point_;
+		Model::Node starting_point_;
+		Model::Node ending_point_;
+		std::string bound_query_;
+		std::string filename_;
 		void Initialize();
 		void CreateStateTable();
 		void UpdateInputState(std::string_view arg);
 		void UpdateParserState(std::string_view arg);
+		bool ValidateParsingState(std::string_view arg);
+		void ResetParsingState();
+		void ParseCoordinates(std::string_view arg);
 		void UpdatePreviousStates();
 		void Release();
 	public:

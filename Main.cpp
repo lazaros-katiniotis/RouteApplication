@@ -55,18 +55,23 @@ namespace route_app {
         string api = "/api/0.6";
         string osm_bounding_box_query_prefix = "/map?bbox=";
         route_app::StorageMethod sm = route_app::StorageMethod::MEMORY_STORAGE;
-        string *osm_bounding_box_query = new string("");
+        //string* osm_bounding_box_query = new string("");
+        string* osm_bounding_box_query;
         string osm_data_file;
         const char* file_mode = "w";
         bool successfully_parsed_arguments = false;
 
         parser_ = new ArgumentParser();
-
+        ArgumentParser::ParserState state = ArgumentParser::ParserState::OK_STATE;
         for (int i = 1; i < argc; i++) {
-            parser_->ParseArgument(string_view{ argv[i] });
+            state = parser_->ParseArgument(string_view{ argv[i] });
+            if (state == ArgumentParser::ParserState::ERROR_STATE) {
+                return;
+            }
         }
 
-        cout << parser_->GetQuery() << endl;
+        cout << parser_->GetBoundQuery() << endl;
+        return;
 
         if (argc > 1) {
             for (int i = 1; i < argc; ++i) {
@@ -102,7 +107,7 @@ namespace route_app {
         InitializeAppData(sm, osm_data_file, file_mode);
         InitializeHTTPRequestQuery(url, api, osm_bounding_box_query_prefix + *osm_bounding_box_query);
         delete osm_bounding_box_query;
-        delete parser_;
+        //delete parser_;
     }
 
     bool RouteApplication::CreateQueryFromBoundingBox(int argc, char** argv, int& index, string* bounding_box_query) {
@@ -246,9 +251,14 @@ namespace route_app {
     }
 
     void RouteApplication::Release() {
-        if (data_->sm == StorageMethod::MEMORY_STORAGE) {
-            delete data_->query_data->memory;
-            delete data_->query_data;
+        if (data_ != NULL) {
+            if (data_->sm == StorageMethod::MEMORY_STORAGE) {
+                delete data_->query_data->memory;
+                delete data_->query_data;
+            }
+        }
+        if (parser_ != NULL) {
+            delete parser_;
         }
         if (handler_ != NULL) {
             delete handler_;
