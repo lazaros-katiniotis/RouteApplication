@@ -56,7 +56,7 @@ namespace route_app {
         string osm_bounding_box_query_prefix = "/map?bbox=";
         route_app::StorageMethod sm = route_app::StorageMethod::MEMORY_STORAGE;
         //string* osm_bounding_box_query = new string("");
-        string* osm_bounding_box_query;
+        string osm_bounding_box_query;
         string osm_data_file;
         const char* file_mode = "w";
         bool successfully_parsed_arguments = false;
@@ -70,43 +70,45 @@ namespace route_app {
             }
         }
 
-        cout << parser_->GetBoundQuery() << endl;
-        return;
+        cout << "bounds: " << parser_->GetBoundQuery() << endl;
+        cout << "filename: " << parser_->GetFilename() << endl;
+        cout << "starting point: " << parser_->GetStartingPoint().x << ", " << parser_->GetStartingPoint().y << endl;
+        cout << "ending point: " << parser_->GetEndingPoint().x << ", " << parser_->GetEndingPoint().y << endl;
+        cout << "point: " << parser_->GetPoint().x << ", " << parser_->GetPoint().y << endl;
 
-        if (argc > 1) {
-            for (int i = 1; i < argc; ++i) {
-                if (string_view{ argv[i] } == "-b") {
-                    successfully_parsed_arguments = CreateQueryFromBoundingBox(argc, argv, i, osm_bounding_box_query);
-                }
-                else if (string_view{ argv[i] } == "-p") {
-                    successfully_parsed_arguments = CreateQueryFromPoint(argc, argv, i, osm_bounding_box_query);
-                }
-                else if (string_view{ argv[i] } == "-f") {
-                    sm = StorageMethod::FILE_STORAGE;
-                    cout << i << ", " << argc << endl;
-                    if (++i < argc) {
-                        osm_data_file = argv[i];
-                        if (*osm_bounding_box_query == "") {
-                            file_mode = "r";
-                        }
-                        PrintDebugMessage(APPLICATION_NAME, "", "OSM data file found: '" + osm_data_file + "'", false);
-                    }
-                    else {
-                        successfully_parsed_arguments = false;
-                        break;
-                    }
-                }
-            }
-        }
-        if (!successfully_parsed_arguments) {
-            cout << "Usage: maps [-b MinLongitude MinLattitude MaxLongitude MaxLattitude] [-p Longtitude Latitude] [-f filename.xml]" << std::endl;
-            cout << "Will use the map of Rapperswil: 8.81598,47.22277,8.83,47.23" << std::endl << std::endl;
-            osm_bounding_box_query = new string("8.81598,47.22277,8.83,47.23");
-        }
-
-        InitializeAppData(sm, osm_data_file, file_mode);
-        InitializeHTTPRequestQuery(url, api, osm_bounding_box_query_prefix + *osm_bounding_box_query);
-        delete osm_bounding_box_query;
+        //if (argc > 1) {
+        //    for (int i = 1; i < argc; ++i) {
+        //        if (string_view{ argv[i] } == "-b") {
+        //            successfully_parsed_arguments = CreateQueryFromBoundingBox(argc, argv, i, osm_bounding_box_query);
+        //        }
+        //        else if (string_view{ argv[i] } == "-p") {
+        //            successfully_parsed_arguments = CreateQueryFromPoint(argc, argv, i, osm_bounding_box_query);
+        //        }
+        //        else if (string_view{ argv[i] } == "-f") {
+        //            sm = StorageMethod::FILE_STORAGE;
+        //            cout << i << ", " << argc << endl;
+        //            if (++i < argc) {
+        //                osm_data_file = argv[i];
+        //                if (*osm_bounding_box_query == "") {
+        //                    file_mode = "r";
+        //                }
+        //                PrintDebugMessage(APPLICATION_NAME, "", "OSM data file found: '" + osm_data_file + "'", false);
+        //            }
+        //            else {
+        //                successfully_parsed_arguments = false;
+        //                break;
+        //            }
+        //        }
+        //    }
+        //}
+        //if (!successfully_parsed_arguments) {
+        //    cout << "Usage: maps [-b MinLongitude MinLattitude MaxLongitude MaxLattitude] [-p Longtitude Latitude] [-f filename.xml]" << std::endl;
+        //    cout << "Will use the map of Rapperswil: 8.81598,47.22277,8.83,47.23" << std::endl << std::endl;
+        //    osm_bounding_box_query = new string("8.81598,47.22277,8.83,47.23");
+        //}
+        
+        InitializeAppData(sm, parser_->GetFilename(), file_mode);
+        InitializeHTTPRequestQuery(url, api, osm_bounding_box_query_prefix + parser_->GetBoundQuery());
         //delete parser_;
     }
 
@@ -274,9 +276,9 @@ namespace route_app {
 
 int main(int argc, char** argv) {
     route_app::RouteApplication *routeApp = new route_app::RouteApplication(argc, argv);
-    //routeApp->HTTPRequest();
-    //routeApp->ModelData();
-    //routeApp->FindRoute();
-    //routeApp->Render();
+    routeApp->HTTPRequest();
+    routeApp->ModelData();
+    routeApp->FindRoute();
+    routeApp->Render();
     delete routeApp;
 }

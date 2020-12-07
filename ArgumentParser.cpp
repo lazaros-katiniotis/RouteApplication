@@ -1,6 +1,7 @@
 #include "ArgumentParser.h"
 #include <cstdlib>
 #include <iostream>
+#include <sstream>
 #include <charconv>
 #include "Helper.h"
 
@@ -12,17 +13,20 @@ ArgumentParser::ArgumentParser() {
 }
 
 void ArgumentParser::Initialize() {
-	current_parser_state_ = ParserState::START_STATE;
+	Reset();
 	previous_parser_state_ = current_parser_state_;
 	current_input_state_ = InputState::INVALID;
-	parsing_type_ = InputState::INVALID;
 	previous_input_state_ = current_input_state_;
 	bound_query_ = "";
-	number_of_coordinates_to_parse = -1;
-	is_parsing_coordinates = false;
 	CreateStateTable();
 }
 
+void ArgumentParser::Reset() {
+	current_parser_state_ = ParserState::START_STATE;
+	parsing_type_ = InputState::INVALID;
+	number_of_coordinates_to_parse = -1;
+	coords_.clear();
+}
 
 void ArgumentParser::CreateStateTable() {
 	stateTable_ = new StateTable();
@@ -45,20 +49,13 @@ void ArgumentParser::CreateStateTable() {
 ArgumentParser::ParserState ArgumentParser::ParseArgument(string_view arg) {
 	cout << "currentParserState: " << (int)current_parser_state_ << ", currentInputState: " << (int)current_input_state_ << endl;
 	UpdateInputState(arg);
-	if (!ValidateParsingState(arg)) {
-		return ParserState::ERROR_STATE;
+	if (current_parser_state_ = ValidateParsingState(arg); current_parser_state_ != ParserState::ERROR_STATE) {
+		UpdateParserState(arg);
+		cout << "new currentParserState: " << (int)current_parser_state_ << ", new currentInputState: " << (int)current_input_state_ << endl;
+		StoreData(arg);
+		ResetParsingState();
 	}
-	ResetParsingState();
-
-	UpdateParserState(arg);
-	cout << "new currentParserState: " << (int)current_parser_state_ << ", new currentInputState: " << (int)current_input_state_ << endl;
-
-	ParseCoordinates(arg);
-
-	//query_ += arg;
 	cout << endl;
-
-	//UpdatePreviousStates();
 	return current_parser_state_;
 }
 
@@ -88,6 +85,7 @@ void ArgumentParser::UpdateInputState(string_view arg) {
 		double result;
 		if (auto [p, ec] = std::from_chars(arg.data(), arg.data() + arg.size(), result); ec == std::errc()) {
 			current_input_state_ = InputState::COORDINATE;
+			coords_.emplace_back(result);
 		}
 		else {
 			current_input_state_ = InputState::FILENAME;
@@ -99,14 +97,14 @@ void ArgumentParser::UpdateInputState(string_view arg) {
 }
 
 void ArgumentParser::UpdateParserState(string_view arg) {
-	if (!is_parsing_coordinates) {
+	//if (parsing_type_ == InputState::INVALID) {
 		if (number_of_coordinates_to_parse < 0) {
 			previous_parser_state_ = current_parser_state_;
 			current_parser_state_ = static_cast<ParserState>(stateTable_->GetState(current_parser_state_, current_input_state_));
 			//cout << "previousParserState: " << (int)previousParserState_ << endl;
 			//cout << "currentParserState:\t" << (int)currentParserState_ << endl;
 		}
-	}
+	//}
 
 	switch (current_parser_state_) {
 	case ParserState::ERROR_STATE:
@@ -118,22 +116,18 @@ void ArgumentParser::UpdateParserState(string_view arg) {
 	case ParserState::PARSING_STATE:
 		switch (previous_input_state_) {
 		case InputState::BOUNDS_COMMAND:
-			is_parsing_coordinates = true;
 			number_of_coordinates_to_parse = bound_coordinates_;
 			cout << "Will need to parse the next " << number_of_coordinates_to_parse << " coordinates." << endl;
 			break;
 		case InputState::START_POINT_COMMAND:
-			is_parsing_coordinates = true;
 			number_of_coordinates_to_parse = point_coordinates_;
 			cout << "Will need to parse the next " << point_coordinates_ << " coordinates." << endl;
 			break;
 		case InputState::END_POINT_COMMAND:
-			is_parsing_coordinates = true;
 			number_of_coordinates_to_parse = point_coordinates_;
 			cout << "Will need to parse the next " << point_coordinates_ << " coordinates." << endl;
 			break;
 		case InputState::POINT_COMMAND:
-			is_parsing_coordinates = true;
 			number_of_coordinates_to_parse = point_coordinates_;
 			cout << "Will need to parse the next " << point_coordinates_ << " coordinates." << endl;
 			break;
@@ -146,48 +140,94 @@ void ArgumentParser::UpdateParserState(string_view arg) {
 	}
 }
 
-bool ArgumentParser::ValidateParsingState(string_view arg) {
+ArgumentParser::ParserState ArgumentParser::ValidateParsingState(string_view arg) {
 	switch (parsing_type_) {
 	case InputState::BOUNDS_COMMAND:
-		//if (is_parsing_coordinates) {
 		if (number_of_coordinates_to_parse > 0 && current_input_state_ != InputState::COORDINATE) {
-			cout << "Error parsing arguments: was expecting a coordinate as an argument. Instead, parsed '" << arg << "'." << endl;
-			current_parser_state_ = ParserState::ERROR_STATE;
-			return false;
+			cout << "Error parsing bound arguments: was expecting a coordinate as an argument. Instead, parsed '" << arg << "'." << endl;
+			return ParserState::ERROR_STATE;
 		}
-		//}
+		break;
+	case InputState::START_POINT_COMMAND:
+		if (number_of_coordinates_to_parse > 0 && current_input_state_ != InputState::COORDINATE) {
+			cout << "Error parsing start arguments: was expecting a coordinate as an argument. Instead, parsed '" << arg << "'." << endl;
+			return ParserState::ERROR_STATE;
+		}
+		break;
+	case InputState::END_POINT_COMMAND:
+		if (number_of_coordinates_to_parse > 0 && current_input_state_ != InputState::COORDINATE) {
+			cout << "Error parsing end arguments: was expecting a coordinate as an argument. Instead, parsed '" << arg << "'." << endl;
+			return ParserState::ERROR_STATE;
+		}
+		break;
+	case InputState::POINT_COMMAND:
+		if (number_of_coordinates_to_parse > 0 && current_input_state_ != InputState::COORDINATE) {
+			cout << "Error parsing point arguments: was expecting a coordinate as an argument. Instead, parsed '" << arg << "'." << endl;
+			return ParserState::ERROR_STATE;
+		}
+		break;
+	case InputState::FILE_COMMAND:
+		if (current_input_state_ != InputState::FILENAME) {
+			cout << "Error parsing filename argument: was expecting a filename as an argument. Instead, parsed '" << arg << "'." << endl;
+			return ParserState::ERROR_STATE;
+		}
 		break;
 	default:
 		break;
 	}
-	return true;
+	return current_parser_state_;
 }
 
 void ArgumentParser::ResetParsingState() {
 	switch (parsing_type_) {
 	case InputState::BOUNDS_COMMAND:
-		//if (is_parsing_coordinates) {
 		if (number_of_coordinates_to_parse == 0) {
-			cout << "Reseting currentParserState to START_STATE." << endl;
-			current_parser_state_ = ParserState::START_STATE;
-			parsing_type_ = InputState::INVALID;
-			is_parsing_coordinates = false;
-			number_of_coordinates_to_parse = -1;
+			cout << "Storing Bound Data" << endl;
+			for (int i = 0; i < 3; i++) {
+				bound_query_ += to_string(coords_[i]) + ",";
+			}
+			bound_query_ += to_string(coords_[3]);
+			Reset();
 		}
-		//}
+		break;
+	case InputState::START_POINT_COMMAND:
+		if (number_of_coordinates_to_parse == 0) {
+			cout << "Storing Start Data" << endl;
+			InitializePoint(starting_point_);
+			Reset();
+		}
+		break;
+	case InputState::END_POINT_COMMAND:
+		if (number_of_coordinates_to_parse == 0) {
+			cout << "Storing end Data" << endl;
+			InitializePoint(ending_point_);
+			Reset();
+		}
+		break;
+	case InputState::POINT_COMMAND:
+		if (number_of_coordinates_to_parse == 0) {
+			cout << "Storing point Data" << endl;
+			InitializePoint(point_);
+			Reset();
+		}
 		break;
 	case InputState::FILE_COMMAND:
-		cout << "Reseting currentParserState to START_STATE." << endl;
-		current_parser_state_ = ParserState::START_STATE;
-		parsing_type_ = InputState::INVALID;
-		is_parsing_coordinates = false;
+		Reset();
+		break;
+	default:
 		break;
 	}
 
 }
 
-void ArgumentParser::ParseCoordinates(string_view arg) {
+void inline ArgumentParser::InitializePoint(Model::Node& node) {
+	node.x = coords_[0];
+	node.y = coords_[1];
+}
+
+void ArgumentParser::StoreData(string_view arg) {
 	cout << "current_type_: " << (int)parsing_type_ << endl;
+	cout << "previous_parser_state_: " << (int)previous_parser_state_ << endl;
 	if (parsing_type_ == InputState::INVALID) {
 		if (previous_input_state_ != InputState::COORDINATE && previous_input_state_ != InputState::FILENAME) {
 			parsing_type_ = previous_input_state_;
@@ -197,33 +237,29 @@ void ArgumentParser::ParseCoordinates(string_view arg) {
 
 	switch (parsing_type_) {
 	case InputState::BOUNDS_COMMAND:
-		//if (is_parsing_coordinates) {
-			if (current_parser_state_ == ParserState::PARSING_STATE && current_input_state_ == InputState::COORDINATE) {
-				bound_query_ += arg;
-				number_of_coordinates_to_parse--;
-				cout << "Added '" << arg << "' to the query." << endl;
-				cout << "number_of_coordinates_left_to_parse: " << number_of_coordinates_to_parse << endl;
-				if (number_of_coordinates_to_parse != 0) {
-					bound_query_ += ",";
-				}
-			}
-		//}
+		number_of_coordinates_to_parse--;
+		cout << "Added '" << arg << "' to the query." << endl;
+		cout << "number_of_coordinates_left_to_parse: " << number_of_coordinates_to_parse << endl;
 		break;
 	case InputState::FILE_COMMAND:
-		cout << "FILENAME: " << arg << endl;
 		filename_ = arg;
+		cout << "FILENAME: " << arg << endl;
+		break;
+	case InputState::START_POINT_COMMAND:
+		number_of_coordinates_to_parse--;
+		cout << "Storing start data..." << endl;
+		break;
+	case InputState::END_POINT_COMMAND:
+		number_of_coordinates_to_parse--;
+		cout << "Storing end data..." << endl;
+		break;
+	case InputState::POINT_COMMAND:
+		number_of_coordinates_to_parse--;
+		cout << "Storing point data..." << endl;
+		break;
 	default:
 		break;
 	}
-}
-
-void ArgumentParser::UpdatePreviousStates() {
-	previous_parser_state_ = current_parser_state_;
-	previous_input_state_ = current_input_state_;
-}
-
-string ArgumentParser::GetBoundQuery() const {
-	return bound_query_;
 }
 
 void ArgumentParser::Release() {

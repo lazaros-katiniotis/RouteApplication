@@ -17,7 +17,11 @@ namespace route_app {
 		ArgumentParser();
 		~ArgumentParser();
 		ParserState ParseArgument(std::string_view arg);
-		std::string GetBoundQuery() const;
+		std::string GetBoundQuery() const { return bound_query_; }
+		std::string GetFilename() const { return filename_; }
+		Model::Node GetStartingPoint() const { return starting_point_; }
+		Model::Node GetEndingPoint() const { return ending_point_; }
+		Model::Node GetPoint() const { return point_; }
 	private:
 		class StateTable {
 		private:
@@ -47,21 +51,22 @@ namespace route_app {
 		const int bound_coordinates_ = 4;
 		const int point_coordinates_ = 2;
 		int number_of_coordinates_to_parse;
-		bool is_parsing_coordinates;
 		InputState parsing_type_;
 		Model::Node point_;
 		Model::Node starting_point_;
 		Model::Node ending_point_;
+		vector<double> coords_;
 		std::string bound_query_;
 		std::string filename_;
 		void Initialize();
 		void CreateStateTable();
 		void UpdateInputState(std::string_view arg);
 		void UpdateParserState(std::string_view arg);
-		bool ValidateParsingState(std::string_view arg);
+		ParserState ValidateParsingState(std::string_view arg);
 		void ResetParsingState();
-		void ParseCoordinates(std::string_view arg);
-		void UpdatePreviousStates();
+		void Reset();
+		void StoreData(std::string_view arg);
+		void InitializePoint(Model::Node& node);
 		void Release();
 	public:
 		StateTable& GetStateTable() const { return *stateTable_; }
