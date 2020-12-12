@@ -59,7 +59,8 @@ namespace route_app {
             void DrawRailways(output_surface& surface) const;
             void DrawWater(output_surface& surface) const;
             void DrawRoute(output_surface& surface) const;
-            void DrawCircle(output_surface& surface, const Model::Node& point, float radius) const;
+            void DrawCircle(output_surface& surface, brush br, stroke_props sp, const Model::Node& point, float radius) const;
+            void DrawCross(output_surface& surface, brush br, stroke_props sp, const Model::Node& point, float size) const;
             interpreted_path PathFromMP(const Model::Multipolygon& mp) const;
             interpreted_path PathFromWay(const Model::Way& way) const;
             void BuildRoadReps();

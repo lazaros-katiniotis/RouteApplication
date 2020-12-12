@@ -93,6 +93,8 @@ void Renderer::DrawHighways(output_surface& surface) const {
 void Renderer::DrawRoute(output_surface& surface) const {
     auto& way = model_->GetRoute();
     auto path = PathFromWay(way);
+    DrawCircle(surface, route_stroke_brush_, route_outline_stroke_props_, model_->GetNodes()[model_->GetRoute().nodes[0]], 0.005f);
+    DrawCircle(surface, route_stroke_brush_, route_outline_stroke_props_, model_->GetNodes()[model_->GetRoute().nodes[model_->GetRoute().nodes.size() - 1]], 0.005f);
     surface.stroke(route_stroke_brush_, path, nullopt, route_outline_stroke_props_);
 }
 
@@ -141,27 +143,38 @@ interpreted_path Renderer::PathFromMP(const Model::Multipolygon& mp) const {
     return interpreted_path{ pb };
 }
 
-void Renderer::DrawCircle(output_surface& surface, const Model::Node& point, float radius) const {
+void Renderer::DrawCircle(output_surface& surface, brush br, stroke_props sp, const Model::Node& point, float radius) const {
     auto pb = path_builder{};
     pb.matrix(matrix_);
-    //pb.new_figure(  point_2d(static_cast<float>(point.x), static_cast<float>(point.y)));
-    pb.cubic_curve(point_2d(static_cast<float>(point.x - radius), static_cast<float>(point.y)),
-        point_2d(static_cast<float>(point.x - radius), static_cast<float>(point.y + radius)),
-        point_2d(static_cast<float>(point.x), static_cast<float>(point.y + radius)));
+    pb.cubic_curve( point_2d(static_cast<float>(point.x - radius), static_cast<float>(point.y)),
+                    point_2d(static_cast<float>(point.x - radius), static_cast<float>(point.y + radius)),
+                    point_2d(static_cast<float>(point.x), static_cast<float>(point.y + radius)));
 
-    pb.cubic_curve(point_2d(static_cast<float>(point.x), static_cast<float>(point.y + radius)),
-        point_2d(static_cast<float>(point.x + radius), static_cast<float>(point.y + radius)),
-        point_2d(static_cast<float>(point.x + radius), static_cast<float>(point.y)));
+    pb.cubic_curve( point_2d(static_cast<float>(point.x), static_cast<float>(point.y + radius)),
+                    point_2d(static_cast<float>(point.x + radius), static_cast<float>(point.y + radius)),
+                    point_2d(static_cast<float>(point.x + radius), static_cast<float>(point.y)));
 
-    pb.cubic_curve(point_2d(static_cast<float>(point.x + radius), static_cast<float>(point.y)),
-        point_2d(static_cast<float>(point.x + radius), static_cast<float>(point.y - radius)),
-        point_2d(static_cast<float>(point.x), static_cast<float>(point.y - radius)));
+    pb.cubic_curve( point_2d(static_cast<float>(point.x + radius), static_cast<float>(point.y)),
+                    point_2d(static_cast<float>(point.x + radius), static_cast<float>(point.y - radius)),
+                    point_2d(static_cast<float>(point.x), static_cast<float>(point.y - radius)));
 
-    pb.cubic_curve(point_2d(static_cast<float>(point.x), static_cast<float>(point.y - radius)),
-        point_2d(static_cast<float>(point.x - radius), static_cast<float>(point.y - radius)),
-        point_2d(static_cast<float>(point.x - radius), static_cast<float>(point.y)));
+    pb.cubic_curve( point_2d(static_cast<float>(point.x), static_cast<float>(point.y - radius)),
+                    point_2d(static_cast<float>(point.x - radius), static_cast<float>(point.y - radius)),
+                    point_2d(static_cast<float>(point.x - radius), static_cast<float>(point.y)));
     auto path = interpreted_path{ pb };
-    surface.stroke(test_brush_, path, nullopt, route_outline_stroke_props_);
+    surface.stroke(br, path, nullopt, sp);
+}
+
+void Renderer::DrawCross(output_surface& surface, brush br, stroke_props sp, const Model::Node& point, float size) const {
+    auto pb = path_builder{};
+    pb.matrix(matrix_);
+    pb.new_figure(point_2d(static_cast<float>(point.x - size), static_cast<float>(point.y + size)));
+    pb.line(point_2d(static_cast<float>(point.x + size), static_cast<float>(point.y - size)));
+    pb.new_figure(point_2d(static_cast<float>(point.x - size), static_cast<float>(point.y - size)));
+    pb.line(point_2d(static_cast<float>(point.x + size), static_cast<float>(point.y + size)));
+    auto path = interpreted_path{ pb };
+    surface.stroke(br, path, nullopt, sp);
+
 }
 
 void Renderer::Display(output_surface& surface) {
@@ -173,8 +186,8 @@ void Renderer::Display(output_surface& surface) {
     DrawHighways(surface);
     DrawBuildings(surface);
     DrawRoute(surface);
-    DrawCircle(surface, model_->GetStartingPoint(), 0.01f);
-    DrawCircle(surface, model_->GetEndingPoint(), 0.01f);
+    DrawCross(surface, test_brush_, route_outline_stroke_props_, model_->GetStartingPoint(), 0.01f);
+    DrawCross(surface, test_brush_, route_outline_stroke_props_, model_->GetEndingPoint(), 0.01f);
 }
 
 void Renderer::Resize(output_surface& surface) {
