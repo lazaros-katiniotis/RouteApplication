@@ -21,6 +21,7 @@ namespace route_app {
             void Release();
             brush mainColor { rgba_color::green };
             Model *model_;
+            bool draw_route_;
             float scale_ = 1.f;
             float pixels_in_meters_ = 1.f;
             matrix_2d matrix_;

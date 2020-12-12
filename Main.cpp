@@ -29,6 +29,7 @@ namespace route_app {
         bool download_osm_data_;
 
         void InitializeAppData();
+        bool StartAndEndNotInitialized();
         void Release();
         void Exit(int code);
     public:
@@ -117,12 +118,20 @@ namespace route_app {
             data_->sm = StorageMethod::FILE_STORAGE;
             break;
         }
+        if (StartAndEndNotInitialized()) {
+            data_->start.x = 0.1;
+            data_->start.y = 0.1;
 
-        data_->start.x = parser_->GetStartingPoint().x;
-        data_->start.y = parser_->GetStartingPoint().y;
+            data_->end.x = 0.9;
+            data_->end.y = 0.9;
+        }
+        else {
+            data_->start.x = parser_->GetStartingPoint().x;
+            data_->start.y = parser_->GetStartingPoint().y;
 
-        data_->end.x = parser_->GetEndingPoint().x;
-        data_->end.y = parser_->GetEndingPoint().y;
+            data_->end.x = parser_->GetEndingPoint().x;
+            data_->end.y = parser_->GetEndingPoint().y;
+        }
 
         errno_t error;
         switch (data_->sm) {
@@ -143,6 +152,14 @@ namespace route_app {
                 data_->query_data->callback_count = 0;
             break;
         }
+    }
+
+    bool RouteApplication::StartAndEndNotInitialized() {
+        if (parser_->GetStartingPoint().x == 0 && parser_->GetStartingPoint().y == 0 &&
+            parser_->GetEndingPoint().x == 0 && parser_->GetStartingPoint().y == 0) {
+            return true;
+        }
+        return false;
     }
 
     void RouteApplication::HTTPRequest() {

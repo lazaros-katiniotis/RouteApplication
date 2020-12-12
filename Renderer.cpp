@@ -15,6 +15,7 @@ static point_2d ToPoint2D(const Model::Node& node) noexcept;
 
 Renderer::Renderer(Model *model) {
     model_ = model;
+    draw_route_ = (model_->GetNodes().size() != 0);
     BuildRoadReps();
     BuildLanduseBrushes();
 }
@@ -185,7 +186,9 @@ void Renderer::Display(output_surface& surface) {
     DrawRailways(surface);
     DrawHighways(surface);
     DrawBuildings(surface);
-    DrawRoute(surface);
+    if (draw_route_) {
+        DrawRoute(surface);
+    }
     DrawCross(surface, test_brush_, route_outline_stroke_props_, model_->GetStartingPoint(), 0.01f);
     DrawCross(surface, test_brush_, route_outline_stroke_props_, model_->GetEndingPoint(), 0.01f);
 }

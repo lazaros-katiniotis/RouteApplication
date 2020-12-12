@@ -223,24 +223,29 @@ void Model::CreateRoute() {
 	start_node_index_ = FindNearestRoadNode(start_);
 	end_node_index_ = FindNearestRoadNode(end_);
 
-	bool found = StartAStarSearch();
-	open_list_.clear();
-	closed_list_.clear();
+	bool found = false;
+	if (start_node_index_ != -1 && end_node_index_ != -1) {
+		found = StartAStarSearch();
+		open_list_.clear();
+		closed_list_.clear();
+	}
+
 	delete[] node_distance_from_start_;
 
 	if (found) {
 		route_.nodes.clear();
 		Node node_it = nodes_[end_node_index_];
 		route_.nodes.emplace_back(end_node_index_);
-		int previous_node_index = -2;
+		set<int> visited_nodes_indices;
 		while (node_it.parent != -1) {
-			if (node_it.parent == previous_node_index) {
+			if (auto index = visited_nodes_indices.find(node_it.parent); index != visited_nodes_indices.end()) {
 				break;
 			}
-			cout << node_it.parent << endl;
+			route_.nodes.emplace_back(node_it.parent);
+			visited_nodes_indices.insert(node_it.parent);
 			node_it = nodes_[node_it.parent];
-			previous_node_index = node_it.parent;
 		}
+		visited_nodes_indices.clear();
 	}
 }
 
