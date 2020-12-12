@@ -22,7 +22,6 @@ namespace route_app {
             double y = 0.0f;
             double f = 0.0f;
             double h = 0.0f;
-
             bool operator < (const Node& other) const { return f < other.f; }
         };
 
@@ -113,7 +112,6 @@ namespace route_app {
         void ParseBounds();
         void ParseNode(const xml_node& node, int& index);
         void ParseAttributes(const xml_node& node, int index);
-        void PrintDoc(const char* message, xml_document* doc, xml_parse_result* result);
         void PrintData();
         void InitializePathfindingData();
         void CreateRoadGraph();

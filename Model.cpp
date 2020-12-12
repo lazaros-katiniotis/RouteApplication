@@ -6,9 +6,6 @@
 #include "Model.h"
 #include "Helper.h"
 #include <chrono>
-//#include <fstream>
-//#include <iomanip>
-
 
 using namespace pugi;
 using namespace route_app;
@@ -52,35 +49,11 @@ Model::Model(AppData* data) {
 	//PrintData();
 }
 
-void Model::PrintDoc(const char* message, pugi::xml_document* doc, pugi::xml_parse_result* result)
-{
-	//std::cout
-	//	<< message
-	//	<< "\t: load result '" << result->description() << "'"
-	//	<< ", first character of root name: U+" << std::hex << std::uppercase << setw(4) << setfill('0') << pugi::as_wide(doc->first_child().name())[0]
-	//	<< ", year: " << doc->first_child().first_child().first_child().child_value()
-	//	<< std::endl;
-}
-
 void Model::PrintData() {
-	//cout << "Printing roads..." << endl;
-	//for (Road road : roads_) {
-	//	cout << &road << ", " << road.type << ", " << road.way << endl;
-	//	auto& way = ways_[road.way];
-	//	for (int it : way.nodes) {
-	//		cout << "nodes_[" << it << "]: (" << (double)nodes_[it].x << ", " << (double)nodes_[it].y << ")" << endl;
-	//	}
-	//}
-	//for (Way way : ways_) {
-	//	for (int it : way.nodes) {
-	//		cout << "nodes_[" << it << "]: (" << (double)nodes_[it].x << ", " << (double)nodes_[it].y << ")" << endl;
-	//	}
-	//}
-
 	PrintDebugMessage(APPLICATION_NAME, "Model", "Printing roads...", true);
 	for (int i = 0; i < roads_.size(); i++) {
 		cout << "road[" << i << "].way: " << roads_[i].way << endl;
-		//cout << "road[" << i << "].type: " << roads_[i].type << endl;
+		cout << "road[" << i << "].type: " << roads_[i].type << endl;
 		cout << endl;
 	}
 
@@ -99,13 +72,10 @@ void Model::PrintData() {
 	PrintDebugMessage(APPLICATION_NAME, "Model", "Printing node_number_to_road_numbers values...", true);
 	for (int index = 0; index < nodes_.size(); index++) {
 		if (auto it = node_number_to_road_numbers.find(index); it != node_number_to_road_numbers.end()) {
-			//print nodes that share at least 2 roads
-			//if (it->second.size() > 1) {
-				cout << "node: " << index << endl;
-				for (auto road_number = it->second.begin(); road_number != it->second.end(); road_number++) {
-					cout << "road name: " << roads_[*road_number].name << "(" << *road_number << ")" << endl;
-				}
-			//}
+			cout << "node: " << index << endl;
+			for (auto road_number = it->second.begin(); road_number != it->second.end(); road_number++) {
+				cout << "road name: " << roads_[*road_number].name << "(" << *road_number << ")" << endl;
+			}
 		}
 	}
 }
@@ -121,14 +91,11 @@ void Model::OpenDocument(AppData* data) {
 		break;
 	case StorageMethod::MEMORY_STORAGE:
 		string memory = data->query_data->memory;
-		//cout << "User-preferred locale setting is " << std::locale("").name().c_str() << '\n';
-		//locale loc(std::locale(), new std::codecvt_utf8<char32_t>);
-		//memory.imbue(loc);
 		result = doc_.load_buffer(data->query_data->memory, data->query_data->size);
 		break;
 	}
 	if (!result) {
-		throw std::logic_error("failed to parse the xml file");
+		throw std::logic_error("failed to parse the xml file.");
 	}
 }
 
@@ -163,7 +130,7 @@ void Model::ParseBounds() {
 		max_lon_ = node.attribute("maxlon").as_double();
 	}
 	else {
-		throw std::logic_error("map's bounds are not defined");
+		throw std::logic_error("map's bounds are not defined.");
 	}
 }
 
@@ -181,7 +148,6 @@ void Model::ParseNode(const xml_node& node, int &index) {
 		nodes_.back().f = 0.0f;
 		nodes_.back().h = 0.0f;
 		nodes_.back().parent = -1;
-
 	}
 	else if (name == "way") {
 		string id = node.attribute("id").as_string();
@@ -205,18 +171,11 @@ void Model::ParseAttributes(const xml_node& node, int index) {
 		auto type = string_view{ node.attribute("v").as_string() };
 
 		if (category == "highway") {
-			//cout << "parsing highway..." << endl;
 			if (auto road_type = StringToRoadType(type); road_type != Road::Invalid) {
 				roads_.emplace_back();
 				roads_.back().way = index;
 				roads_.back().type = road_type;
 
-				//cout << "road index: " << roads_.back().index << endl;
-				//cout << "road way: " << roads_.back().way << endl;
-				//for (auto index : ways_[roads_.back().way].nodes) {
-					//cout << index << ", ";
-				//}
-				//cout << endl;
 				for (const xpath_node& child : node.parent().children()) {
 					auto k = string_view{ child.node().attribute("k").as_string() };
 					if (k == "name") {
@@ -265,7 +224,6 @@ void Model::CreateRoute() {
 	end_node_index_ = FindNearestRoadNode(end_);
 
 	bool found = StartAStarSearch();
-
 	open_list_.clear();
 	closed_list_.clear();
 	delete[] node_distance_from_start_;
@@ -274,9 +232,14 @@ void Model::CreateRoute() {
 		route_.nodes.clear();
 		Node node_it = nodes_[end_node_index_];
 		route_.nodes.emplace_back(end_node_index_);
+		int previous_node_index = -2;
 		while (node_it.parent != -1) {
-			route_.nodes.emplace_back(node_it.parent);
+			if (node_it.parent == previous_node_index) {
+				break;
+			}
+			cout << node_it.parent << endl;
 			node_it = nodes_[node_it.parent];
+			previous_node_index = node_it.parent;
 		}
 	}
 }
@@ -408,8 +371,6 @@ void Model::AdjustCoordinates() {
 	const auto earth_radius = 6378137.0;
 	const auto lat2ym = [&](double lat) { return log(tan(lat * deg_to_rad / 2 + pi / 4)) / 2 * earth_radius; };
 	const auto lon2xm = [&](double lon) { return lon * deg_to_rad / 2 * earth_radius; };
-	//cout << "delta longtitude: " << (max_lon_ - min_lon_) << endl;
-	//cout << "delta latitude: " << (max_lat_ - min_lat_) << endl;
 	const auto dx = lon2xm(max_lon_) - lon2xm(min_lon_);
 	const auto dy = lat2ym(max_lat_) - lat2ym(min_lat_);
 	const auto min_x = lon2xm(min_lon_);
