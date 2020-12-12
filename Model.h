@@ -8,12 +8,12 @@
 #include <set>
 #include <unordered_map>
 
-#include "Helper.h"
-
 using namespace std;
 using namespace pugi;
 
 namespace route_app {
+    struct AppData;
+
     class Model {
     public:
         struct Node {

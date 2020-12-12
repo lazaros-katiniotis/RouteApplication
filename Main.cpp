@@ -9,7 +9,6 @@
 #include "HTTPHandler.h"
 #include "ArgumentParser.h"
 #include "Renderer.h"
-#include "Model.h"
 
 using namespace std;
 namespace io2d = std::experimental::io2d;
@@ -23,165 +22,118 @@ namespace route_app {
         Model *model_ = NULL;
         Renderer *renderer_ = NULL;
         ArgumentParser* parser_ = NULL;
-        void ParseCommandLineArguments(int argc, char** argv);
-        bool CreateQueryFromBoundingBox(int argc, char** argv, int& index, string* bounding_box_query);
-        bool CreateQueryFromPoint(int argc, char** argv, int& index, string* bounding_box_query);
-        void InitializeAppData(StorageMethod sm, string filename, const char* file_mode);
-        void InitializeHTTPRequestQuery(string url, string api, string arguments);
+        string url_;
+        string api_;
+        string query_prefix_;
+        string query_bounds_;
+        bool download_osm_data_;
+
+        void InitializeAppData();
         void Release();
+        void Exit(int code);
     public:
         RouteApplication(int argc, char** argv);
         ~RouteApplication();
         static string GetApplicationName();
+        bool ParseCommandLineArguments(int argc, char** argv);
+        void Initialize();
+        void ReleaseParser();
         void HTTPRequest();
         void ModelData();
         void FindRoute();
         void Render();
         void DisplayMap();
-        const double BOUNDING_BOX_INTERVAL = 0.00333333f;
+        const double BOUNDING_BOX_INTERVAL = 0.00166666;
     };
 
     RouteApplication::RouteApplication(int argc, char** argv) {
-        PrintDebugMessage(APPLICATION_NAME, "", "Initiating Route Application...", false);
+        PrintDebugMessage(APPLICATION_NAME, "", "Creating Route Application...", false);
+        url_ = "https://api.openstreetmap.org";
+        api_ = "/api/0.6";
+        query_prefix_ = "/map?bbox=";
+        query_bounds_ = "";
+        download_osm_data_ = false;
         cout << std::setprecision(7);
         cout << std::fixed;
-        ParseCommandLineArguments(argc, argv);
     }
 
-    void RouteApplication::ParseCommandLineArguments(int argc, char** argv) {
+    bool RouteApplication::ParseCommandLineArguments(int argc, char** argv) {
         PrintDebugMessage(APPLICATION_NAME, "", "Parsing arguments from command line...", false);
-        //RouteApplication.exe -b 20.75456,38.95622,20.75478,38.95636 -f test.xml
-        string url = "https://api.openstreetmap.org";
-        string api = "/api/0.6";
-        string osm_bounding_box_query_prefix = "/map?bbox=";
-        route_app::StorageMethod sm = route_app::StorageMethod::MEMORY_STORAGE;
-        //string* osm_bounding_box_query = new string("");
-        string osm_bounding_box_query;
-        string osm_data_file;
-        const char* file_mode = "w";
-        bool successfully_parsed_arguments = false;
 
-        parser_ = new ArgumentParser();
-        ArgumentParser::ParserState state = ArgumentParser::ParserState::OK_STATE;
-        for (int i = 1; i < argc; i++) {
-            state = parser_->ParseArgument(string_view{ argv[i] });
-            if (state == ArgumentParser::ParserState::ERROR_STATE) {
-                return;
-            }
-        }
-
-        cout << "bounds: " << parser_->GetBoundQuery() << endl;
-        cout << "filename: " << parser_->GetFilename() << endl;
-        cout << "starting point: " << parser_->GetStartingPoint().x << ", " << parser_->GetStartingPoint().y << endl;
-        cout << "ending point: " << parser_->GetEndingPoint().x << ", " << parser_->GetEndingPoint().y << endl;
-        cout << "point: " << parser_->GetPoint().x << ", " << parser_->GetPoint().y << endl;
-
-        //if (argc > 1) {
-        //    for (int i = 1; i < argc; ++i) {
-        //        if (string_view{ argv[i] } == "-b") {
-        //            successfully_parsed_arguments = CreateQueryFromBoundingBox(argc, argv, i, osm_bounding_box_query);
-        //        }
-        //        else if (string_view{ argv[i] } == "-p") {
-        //            successfully_parsed_arguments = CreateQueryFromPoint(argc, argv, i, osm_bounding_box_query);
-        //        }
-        //        else if (string_view{ argv[i] } == "-f") {
-        //            sm = StorageMethod::FILE_STORAGE;
-        //            cout << i << ", " << argc << endl;
-        //            if (++i < argc) {
-        //                osm_data_file = argv[i];
-        //                if (*osm_bounding_box_query == "") {
-        //                    file_mode = "r";
-        //                }
-        //                PrintDebugMessage(APPLICATION_NAME, "", "OSM data file found: '" + osm_data_file + "'", false);
-        //            }
-        //            else {
-        //                successfully_parsed_arguments = false;
-        //                break;
-        //            }
-        //        }
-        //    }
-        //}
-        //if (!successfully_parsed_arguments) {
-        //    cout << "Usage: maps [-b MinLongitude MinLattitude MaxLongitude MaxLattitude] [-p Longtitude Latitude] [-f filename.xml]" << std::endl;
-        //    cout << "Will use the map of Rapperswil: 8.81598,47.22277,8.83,47.23" << std::endl << std::endl;
-        //    osm_bounding_box_query = new string("8.81598,47.22277,8.83,47.23");
-        //}
-        
-        InitializeAppData(sm, parser_->GetFilename(), file_mode);
-        InitializeHTTPRequestQuery(url, api, osm_bounding_box_query_prefix + parser_->GetBoundQuery());
-        //delete parser_;
+        parser_ = new ArgumentParser(argc, argv);
+        return parser_->SyntaxAnalysis(argc, argv);
     }
 
-    bool RouteApplication::CreateQueryFromBoundingBox(int argc, char** argv, int& index, string* bounding_box_query) {
-        static int coordinate_count = 0;
-        while (++index < argc) {
-            //if (total_coords == 4) {
-            //}
-            //else if (total_coords == 2) {
-            //    double coord = atof(argv[index]);
-            //    for (int i = 0; i < 2; i++) {
-            //        *bounding_box_query += (coord - BOUNDING_BOX_INTERVAL);
-            //        *bounding_box_query += ",";
-            //    }
-            //}
-            *bounding_box_query += argv[index];
-            if (++coordinate_count != 4) {
-                *bounding_box_query += ",";
-            }
-            else {
-                break;
-            }
+    void RouteApplication::Initialize() {
+        InitializeAppData();
+        using S = ArgumentParser::SyntaxFlags;
+        if ((parser_->GetSyntaxState() & (int)S::BOUNDS) == (int)S::BOUNDS) {
+            query_bounds_ = parser_->GetBoundQuery();
+            download_osm_data_ = true;
         }
-        if (coordinate_count != 4) {
-            return false;
+        else if ((parser_->GetSyntaxState() & (int)S::POINT) == (int)S::POINT) {
+            query_bounds_ += to_string(data_->point.x - BOUNDING_BOX_INTERVAL);
+            query_bounds_ += ",";
+            query_bounds_ += to_string(data_->point.y - BOUNDING_BOX_INTERVAL);
+            query_bounds_ += ",";
+            query_bounds_ += to_string(data_->point.x + BOUNDING_BOX_INTERVAL);
+            query_bounds_ += ",";
+            query_bounds_ += to_string(data_->point.y + BOUNDING_BOX_INTERVAL);
+            download_osm_data_ = true;
         }
-        PrintDebugMessage(APPLICATION_NAME, "", "OSM Bounding box found: " + *bounding_box_query, false);
-        return true;
+        ReleaseParser();
     }
 
-    bool RouteApplication::CreateQueryFromPoint(int argc, char** argv, int& index, string* bounding_box_query) {
-        static int coordinate_count = 0;
-        while (++index < argc) {
-            //if (total_coords == 4) {
-            //}
-            //else if (total_coords == 2) {
-            //    double coord = atof(argv[index]);
-            //    for (int i = 0; i < 2; i++) {
-            //        *bounding_box_query += (coord - BOUNDING_BOX_INTERVAL);
-            //        *bounding_box_query += ",";
-            //    }
-            //}
-            *bounding_box_query += argv[index];
-            if (++coordinate_count != 2) {
-                *bounding_box_query += ",";
-            }
-            else {
-                break;
-            }
-        }
-        if (coordinate_count != 2) {
-            return false;
-        }
-        PrintDebugMessage(APPLICATION_NAME, "", "OSM Bounding box found: " + *bounding_box_query, false);
-        return true;
-    }
-
-
-    void RouteApplication::InitializeAppData(StorageMethod sm, string filename, const char* file_mode) {
+    void RouteApplication::InitializeAppData() {
         data_ = new AppData();
-        data_->sm = sm;
+        string file_mode;
+
+        using S = ArgumentParser::SyntaxFlags;
+        switch (parser_->GetSyntaxState()) {
+        case (int)S::BOUNDS:
+            data_->sm = StorageMethod::MEMORY_STORAGE;
+            break;
+        case (int)S::FILE:
+            file_mode = "r";
+            data_->sm = StorageMethod::FILE_STORAGE;
+            break;
+        case (int)S::BOUNDS | (int)S::FILE:
+            file_mode = "w";
+            data_->sm = StorageMethod::FILE_STORAGE;
+            break;
+        case (int)S::POINT:
+            data_->point.x = parser_->GetPoint().x;
+            data_->point.y = parser_->GetPoint().y;
+            data_->sm = StorageMethod::MEMORY_STORAGE;
+            break;
+        case (int)S::POINT | (int)S::FILE:
+            data_->point.x = parser_->GetPoint().x;
+            data_->point.y = parser_->GetPoint().y;
+            file_mode = "w";
+            data_->sm = StorageMethod::FILE_STORAGE;
+            break;
+        default:
+            file_mode = "w";
+            data_->sm = StorageMethod::FILE_STORAGE;
+            break;
+        }
+
+        data_->start.x = parser_->GetStartingPoint().x;
+        data_->start.y = parser_->GetStartingPoint().y;
+
+        data_->end.x = parser_->GetEndingPoint().x;
+        data_->end.y = parser_->GetEndingPoint().y;
+
         errno_t error;
         switch (data_->sm) {
             case StorageMethod::FILE_STORAGE:
                 data_->query_file = new QueryFile();
-                data_->query_file->filename = filename;
+                data_->query_file->filename = parser_->GetFilename();
                 _set_errno(0);
-                error = fopen_s(&data_->query_file->file, data_->query_file->filename.c_str(), file_mode);
+                error = fopen_s(&data_->query_file->file, data_->query_file->filename.c_str(), file_mode.c_str());
                 if (error != 0) {
-                    string filename = (data_->query_file->filename);
-                    string message = "Error opening file '" + filename + "'.";
-                    PrintDebugMessage(APPLICATION_NAME, "", message, false);
-                    exit(EXIT_FAILURE);
+                    PrintDebugMessage(APPLICATION_NAME, "", "Error opening file '" + data_->query_file->filename + "'.", false);
+                    Exit(EXIT_FAILURE);
                 }
                 break;
             case StorageMethod::MEMORY_STORAGE:
@@ -193,13 +145,12 @@ namespace route_app {
         }
     }
 
-    void RouteApplication::InitializeHTTPRequestQuery(string url, string api, string arguments) {
-        PrintDebugMessage(APPLICATION_NAME, "", "Initializing HTTP request query...", true);
-        handler_ = new HTTPHandler(url, api, arguments);
-    }
-
     void RouteApplication::HTTPRequest() {
-        handler_->Request(data_);
+        if (download_osm_data_) {
+            PrintDebugMessage(APPLICATION_NAME, "", "Initializing HTTP request query...", true);
+            handler_ = new HTTPHandler(url_, api_, query_prefix_ + query_bounds_);
+            handler_->Request(data_);
+        }
     }
 
     void RouteApplication::ModelData() {
@@ -209,17 +160,9 @@ namespace route_app {
 
     void RouteApplication::FindRoute() {
         PrintDebugMessage(APPLICATION_NAME, "", "Finding route...", true);
-        Model::Node start;
-        Model::Node end;
 
-        start.x = 0.15f;
-        start.y = 0.15f;
-
-        end.x = 0.6f;
-        end.y = 0.6f;
-
-        model_->InitializePoint(model_->GetStartingPoint(), start);
-        model_->InitializePoint(model_->GetEndingPoint(), end);
+        model_->InitializePoint(model_->GetStartingPoint(), data_->start);
+        model_->InitializePoint(model_->GetEndingPoint(), data_->end);
         model_->CreateRoute();
     }
 
@@ -252,33 +195,56 @@ namespace route_app {
         display.begin_show();
     }
 
+    void RouteApplication::ReleaseParser() {
+        if (parser_ != NULL) {
+            delete parser_;
+            parser_ = NULL;
+        }
+    }
+
     void RouteApplication::Release() {
         if (data_ != NULL) {
             if (data_->sm == StorageMethod::MEMORY_STORAGE) {
                 delete data_->query_data->memory;
+                data_->query_data->memory = NULL;
                 delete data_->query_data;
+                data_->query_data = NULL;
             }
+            delete data_;
+            data_ = NULL;
         }
         if (parser_ != NULL) {
             delete parser_;
+            parser_ = NULL;
         }
         if (handler_ != NULL) {
             delete handler_;
+            handler_ = NULL;
         }
         if (model_ != NULL) {
             delete model_;
+            model_ = NULL;
         }
         if (renderer_ != NULL) {
             delete renderer_;
+            renderer_ = NULL;
         }
+    }
+
+    void RouteApplication::Exit(int code) {
+        Release();
+        exit(code);
     }
 }
 
 int main(int argc, char** argv) {
     route_app::RouteApplication *routeApp = new route_app::RouteApplication(argc, argv);
-    routeApp->HTTPRequest();
-    routeApp->ModelData();
-    routeApp->FindRoute();
-    routeApp->Render();
+    if (routeApp->ParseCommandLineArguments(argc, argv)) {
+        routeApp->Initialize();
+        routeApp->HTTPRequest();
+        routeApp->ModelData();
+        routeApp->FindRoute();
+        routeApp->Render();
+    }
     delete routeApp;
 }

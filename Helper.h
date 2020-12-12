@@ -3,10 +3,12 @@
 #define ROUTE_APP_HELPER_H
 #include <iostream>
 
+#include "Model.h"
+
 using namespace std;
-
 namespace route_app {
-
+    class Model;
+    //struct Model::Node;
     static const string APPLICATION_NAME = "RouteApplication";
 
     enum class StorageMethod {
@@ -28,9 +30,12 @@ namespace route_app {
         StorageMethod sm;
         QueryData* query_data;
         QueryFile* query_file;
+        Model::Node point;
+        Model::Node start;
+        Model::Node end;
     };
 
-    static void CloseFile(QueryFile *query_file) {
+    static void CloseFile(QueryFile* query_file) {
         errno_t error;
         if (query_file->file == NULL) {
             return;
@@ -43,7 +48,7 @@ namespace route_app {
             throw std::logic_error("The file '" + filename + "' was not closed.\n");
         }
     }
- 
+
     void inline PrintDebugMessage(string application_name, string system_name, string message, bool newlineAtStart) {
         string newline = "";
         string tabs = "";
@@ -54,13 +59,13 @@ namespace route_app {
 
         if (system_name == "") {
             tabs = "\t\t";
-        } else {
-            system_name = "::" + system_name;
-            tabs = "\t";
+        }
+        else {
+          system_name = "::" + system_name;
+          tabs = "\t";
         }
 
         cout << newline + APPLICATION_NAME + system_name + tabs + message << endl;
     }
 }
-
 #endif
