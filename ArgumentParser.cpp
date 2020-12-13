@@ -67,11 +67,18 @@ bool ArgumentParser::SyntaxAnalysis(const int& argc, char** argv) {
 		syntax_state_ = (int)SyntaxFlags::BOUNDS;
 		return true;
 	}
+	cout << endl;
 	for (int i = 1; i < argc; i++) {
-		ParseArgument(argv[i]);
+		if (ParseArgument(argv[i]) == ParserState::ERROR_STATE) {
+			if (CheckForWrongArgumentError(argc, argv, i)) {
+				return false;
+			}
+		}
+
 		if (CheckForMissingArgumentError(argc, argv, i)) {
 			return false;
 		}
+
 		while (number_of_coordinates_to_parse >= 0) {
 			if (ParseArgument(argv[++i]) == ParserState::ERROR_STATE) {
 				if (CheckForWrongArgumentError(argc, argv, i)) {
@@ -97,7 +104,7 @@ bool ArgumentParser::CheckForMissingArgumentError(const int& argc, char** argv, 
 }
 
 bool ArgumentParser::CheckForWrongArgumentError(const int& argc, char** argv, const int i) {
-	if (current_input_state_ != InputState::COORDINATE) {
+	//if (current_input_state_ != InputState::COORDINATE) {
 		cout << "'";
 		for (int j = 0; j < argc; j++) {
 			if (argv[j] == argv[i]) {
@@ -112,8 +119,8 @@ bool ArgumentParser::CheckForWrongArgumentError(const int& argc, char** argv, co
 		}
 		cout << "'" << endl;
 		return true;
-	}
-	return false;
+	//}
+	//return false;
 }
 
 bool ArgumentParser::CheckForSyntaxError() {
@@ -145,18 +152,17 @@ ArgumentParser::ParserState ArgumentParser::ParseArgument(string_view arg) {
 		StoreData(arg);
 		ResetParsingState();
 	}
-	cout << endl;
 	return current_parser_state_;
 }
 
 void ArgumentParser::UpdateInputState(string_view arg) {
-	cout << "Parsing argument: " << arg << endl;
+	//cout << "Parsing argument: " << arg << endl;
 	InputState input_state_before_update = current_input_state_;
 	if (arg == "-b") {
 		current_input_state_ = InputState::BOUNDS_COMMAND;
 		syntax_state_ |= (int)SyntaxFlags::BOUNDS;
 		number_of_coordinates_to_parse = bound_coordinates_;
-		cout << "Will need to parse the next " << number_of_coordinates_to_parse << " coordinates." << endl;
+		//cout << "Will need to parse the next " << number_of_coordinates_to_parse << " coordinates." << endl;
 	}
 	else if (arg == "-f") {
 		current_input_state_ = InputState::FILE_COMMAND;
@@ -166,18 +172,18 @@ void ArgumentParser::UpdateInputState(string_view arg) {
 		current_input_state_ = InputState::POINT_COMMAND;
 		syntax_state_ |= (int)SyntaxFlags::POINT;
 		number_of_coordinates_to_parse = point_coordinates_;
-		cout << "Will need to parse the next " << point_coordinates_ << " coordinates." << endl;
+		//cout << "Will need to parse the next " << point_coordinates_ << " coordinates." << endl;
 	}
 	else if (arg == "-start") {
 		current_input_state_ = InputState::START_POINT_COMMAND;
 		number_of_coordinates_to_parse = point_coordinates_;
-		cout << "Will need to parse the next " << point_coordinates_ << " coordinates." << endl;
+		//cout << "Will need to parse the next " << point_coordinates_ << " coordinates." << endl;
 
 	}
 	else if (arg == "-end") {
 		current_input_state_ = InputState::END_POINT_COMMAND;
 		number_of_coordinates_to_parse = point_coordinates_;
-		cout << "Will need to parse the next " << point_coordinates_ << " coordinates." << endl;
+		//cout << "Will need to parse the next " << point_coordinates_ << " coordinates." << endl;
 	}
 	else {
 		double result;
@@ -203,46 +209,22 @@ void ArgumentParser::UpdateParserState(string_view arg) {
 }
 
 ArgumentParser::ParserState ArgumentParser::ValidateParsingState(string_view arg) {
-	switch (previous_input_state_) {
-	case InputState::BOUNDS_COMMAND:
-		if (current_input_state_ != InputState::COORDINATE) {
-			cout << "Error parsing bound arguments: was expecting a coordinate as an argument. Instead, parsed '" << arg << "'." << endl;
+	switch (current_parser_state_) {
+	case ParserState::PARSING_STATE:
+		if (number_of_coordinates_to_parse >= 1 && current_input_state_ == InputState::FILENAME) {
+			cout << "Error parsing arguments: was expecting a coordinate as an argument. Instead, parsed '" << arg << "'." << endl;
 			return ParserState::ERROR_STATE;
 		}
 		break;
-	case InputState::START_POINT_COMMAND:
-		if (current_input_state_ != InputState::COORDINATE) {
-			cout << "Error parsing start arguments: was expecting a coordinate as an argument. Instead, parsed '" << arg << "'." << endl;
-			return ParserState::ERROR_STATE;
+	case ParserState::ERROR_STATE:
+		switch (current_input_state_) {
+		case InputState::COORDINATE:
+			cout << "Error parsing arguments: was not expecting a coordinate as an argument." << endl;
+			break;
+		default:
+			cout << "Error parsing arguments: was not expecting a string as an argument." << endl;
+			break;
 		}
-		break;
-	case InputState::END_POINT_COMMAND:
-		if (current_input_state_ != InputState::COORDINATE) {
-			cout << "Error parsing end arguments: was expecting a coordinate as an argument. Instead, parsed '" << arg << "'." << endl;
-			return ParserState::ERROR_STATE;
-		}
-		break;
-	case InputState::POINT_COMMAND:
-		if (current_input_state_ != InputState::COORDINATE) {
-			cout << "Error parsing point arguments: was expecting a coordinate as an argument. Instead, parsed '" << arg << "'." << endl;
-			return ParserState::ERROR_STATE;
-		}
-		break;
-	case InputState::FILE_COMMAND:
-		if (current_input_state_ != InputState::FILENAME) {
-			cout << "Error parsing filename argument: was expecting a filename as an argument. Instead, parsed '" << arg << "'." << endl;
-			return ParserState::ERROR_STATE;
-		}
-		break;
-	//case InputState::COORDINATE:
-		//if (number_of_coordinates_to_parse > 0) {
-		//	if (current_input_state_ != InputState::COORDINATE) {
-		//		cout << "Error parsing coordinate argument: was expecting a coordinate as an argument. Instead, parsed '" << arg << "':" << endl;
-		//		//return ParserState::ERROR_STATE;
-		//	}
-		//}
-		//break;
-	default:
 		break;
 	}
 	return current_parser_state_;
@@ -252,35 +234,35 @@ void ArgumentParser::StoreData(string_view arg) {
 	switch (previous_input_state_) {
 	case InputState::BOUNDS_COMMAND:
 		number_of_coordinates_to_parse--;
-		cout << "Added '" << arg << "' to the query." << endl;
-		cout << "number_of_coordinates_left_to_parse: " << number_of_coordinates_to_parse << endl;
+		//cout << "Added '" << arg << "' to the query." << endl;
+		//cout << "number_of_coordinates_left_to_parse: " << number_of_coordinates_to_parse << endl;
 		if (number_of_coordinates_to_parse == 0) {
-			cout << "Storing Bound Data" << endl;
+			//cout << "Storing Bound Data" << endl;
 			InitializeBounds();
 		}
 		break;
 	case InputState::FILE_COMMAND:
 		filename_ = arg;
-		cout << "FILENAME: " << arg << endl;
+		//cout << "FILENAME: " << arg << endl;
 		break;
 	case InputState::START_POINT_COMMAND:
 		number_of_coordinates_to_parse--;
 		if (number_of_coordinates_to_parse == 0) {
-			cout << "Storing Start Data" << endl;
+			//cout << "Storing Start Data" << endl;
 			InitializePoint(starting_point_);
 		}
 		break;
 	case InputState::END_POINT_COMMAND:
 		number_of_coordinates_to_parse--;
 		if (number_of_coordinates_to_parse == 0) {
-			cout << "Storing end Data" << endl;
+			//cout << "Storing end Data" << endl;
 			InitializePoint(ending_point_);
 		}
 		break;
 	case InputState::POINT_COMMAND:
 		number_of_coordinates_to_parse--;
 		if (number_of_coordinates_to_parse == 0) {
-			cout << "Storing point Data" << endl;
+			//cout << "Storing point Data" << endl;
 			InitializePoint(point_);
 		}
 		break;

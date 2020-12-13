@@ -59,6 +59,7 @@ namespace route_app {
         Model(AppData* data);
         ~Model();
         double GetMetricScale() { return metric_scale_; }
+        double GetAspectRatio();
         auto& GetBuildings() { return buildings_; }
         auto& GetRoads() { return roads_; }
         auto& GetRailways() { return railways_; }
@@ -73,9 +74,7 @@ namespace route_app {
         Node& GetStartingPoint() { return start_; }
         Node& GetEndingPoint() { return end_; }
         const Way& GetRoute() const { return route_; }
-        double inline EuclideanDistance(Model::Node const node, Model::Node const other) {
-            return sqrt(pow(node.x - other.x, 2) + pow(node.y - other.y, 2));
-        }
+        double EuclideanDistance(Model::Node const node, Model::Node const other);
     private:
         xml_document doc_;
         double min_lat_ = 0.;
@@ -83,6 +82,7 @@ namespace route_app {
         double min_lon_ = 0.;
         double max_lon_ = 0.;
         double metric_scale_ = 1.f;
+        double aspect_ratio_;
         unordered_map<string, int> node_id_to_number_;
         unordered_map<string, int> way_id_to_number_;
         unordered_map<int, vector<int>> node_number_to_road_numbers;
@@ -121,6 +121,12 @@ namespace route_app {
         void AdjustCoordinates();
         void Release();
     };
+
+    double inline Model::GetAspectRatio() { return aspect_ratio_; }
+
+    double inline Model::EuclideanDistance(Model::Node const node, Model::Node const other) {
+        return sqrt(pow(node.x - other.x, 2) + pow(node.y - other.y, 2));
+    }
 }
 
 #endif

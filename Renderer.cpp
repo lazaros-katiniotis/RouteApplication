@@ -21,6 +21,8 @@ Renderer::Renderer(Model *model) {
 }
 
 void Renderer::Initialize(output_surface& surface) {
+    cout << "x: " << surface.dimensions().x() << endl;
+    cout << "y: " << surface.dimensions().y() << endl;
     scale_ = static_cast<float>(std::max(surface.dimensions().x(), surface.dimensions().y()));
     pixels_in_meters_ = static_cast<float>(scale_ / model_->GetMetricScale());
     matrix_ = matrix_2d::create_scale({ scale_, -scale_ }) * matrix_2d::create_translate({ 0.f, static_cast<float>(surface.dimensions().y()) });
@@ -66,19 +68,19 @@ void Renderer::DrawBuildings(output_surface& surface) const {
 
 void Renderer::DrawHighways(output_surface& surface) const {
     auto ways = model_->GetWays().data();
-    for (auto road : model_->GetRoads()) {
-        if (auto rep_it = road_reps_.find(road.type); rep_it != road_reps_.end()) {
-            auto& rep = rep_it->second;
-            auto& way = ways[road.way];
-            auto width = rep.metric_width > 0.f ? (rep.metric_width * pixels_in_meters_) : 1.f;
-            auto sp = stroke_props{ width, line_cap::round };
-            auto path = PathFromWay(way);
-            if (road.type != Model::Road::Cycleway && road.type != Model::Road::Footway) {
-                surface.stroke(railway_stroke_brush_, path, nullopt, road_outline_stroke_props_);
-            }
-            //surface.stroke(rep.brush, path, nullopt, sp, rep.dashes);
-        }
-    }
+    //for (auto road : model_->GetRoads()) {
+    //    if (auto rep_it = road_reps_.find(road.type); rep_it != road_reps_.end()) {
+    //        auto& rep = rep_it->second;
+    //        auto& way = ways[road.way];
+    //        auto width = rep.metric_width > 0.f ? (rep.metric_width * pixels_in_meters_) : 1.f;
+    //        auto sp = stroke_props{ width, line_cap::round };
+    //        auto path = PathFromWay(way);
+    //        if (road.type != Model::Road::Cycleway && road.type != Model::Road::Footway) {
+    //            surface.stroke(railway_stroke_brush_, path, nullopt, road_outline_stroke_props_);
+    //        }
+    //        //surface.stroke(rep.brush, path, nullopt, sp, rep.dashes);
+    //    }
+    //}
     for (auto road : model_->GetRoads()) {
         if (auto rep_it = road_reps_.find(road.type); rep_it != road_reps_.end()) {
             auto& rep = rep_it->second;

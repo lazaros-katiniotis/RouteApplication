@@ -30,6 +30,7 @@ namespace route_app {
 
         void InitializeAppData();
         bool StartAndEndNotInitialized();
+        void ApplyAspectRatioToStartAndEnd();
         void Release();
         void Exit(int code);
     public:
@@ -121,14 +122,12 @@ namespace route_app {
         if (StartAndEndNotInitialized()) {
             data_->start.x = 0.1;
             data_->start.y = 0.1;
-
             data_->end.x = 0.9;
             data_->end.y = 0.9;
         }
         else {
             data_->start.x = parser_->GetStartingPoint().x;
             data_->start.y = parser_->GetStartingPoint().y;
-
             data_->end.x = parser_->GetEndingPoint().x;
             data_->end.y = parser_->GetEndingPoint().y;
         }
@@ -189,16 +188,8 @@ namespace route_app {
         DisplayMap();
     }
 
-    string RouteApplication::GetApplicationName() {
-        return APPLICATION_NAME;
-    }
-
-    RouteApplication::~RouteApplication() {
-        Release();
-    }
-
     void RouteApplication::DisplayMap() {
-        auto display = io2d::output_surface{ 600, 600, io2d::format::argb32, io2d::scaling::none, io2d::refresh_style::fixed, 30 };
+        auto display = io2d::output_surface{ (int)(600 * model_->GetAspectRatio()), 600, io2d::format::argb32, io2d::scaling::none, io2d::refresh_style::fixed, 30 };
         renderer_->Initialize(display);
 
         display.size_change_callback([&](io2d::output_surface& surface) {
@@ -217,6 +208,10 @@ namespace route_app {
             delete parser_;
             parser_ = NULL;
         }
+    }
+
+    RouteApplication::~RouteApplication() {
+        Release();
     }
 
     void RouteApplication::Release() {
@@ -246,6 +241,10 @@ namespace route_app {
             delete renderer_;
             renderer_ = NULL;
         }
+    }
+
+    string RouteApplication::GetApplicationName() {
+        return APPLICATION_NAME;
     }
 
     void RouteApplication::Exit(int code) {

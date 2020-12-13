@@ -46,7 +46,17 @@ Model::Model(AppData* data) {
 	OpenDocument(data);
 	ParseData(data);
 	AdjustCoordinates();
-	//PrintData();
+	cout << "ASPECT RATIO: " << aspect_ratio_ << endl;
+	if (aspect_ratio_ > 1) {
+		data->start.y /= GetAspectRatio();
+		data->end.y /= GetAspectRatio();
+	}
+	else {
+		data->start.x *= GetAspectRatio();
+		data->end.x *= GetAspectRatio();
+	}
+
+
 }
 
 void Model::PrintData() {
@@ -378,6 +388,7 @@ void Model::AdjustCoordinates() {
 	const auto lon2xm = [&](double lon) { return lon * deg_to_rad / 2 * earth_radius; };
 	const auto dx = lon2xm(max_lon_) - lon2xm(min_lon_);
 	const auto dy = lat2ym(max_lat_) - lat2ym(min_lat_);
+	aspect_ratio_ = dx / dy;
 	const auto min_x = lon2xm(min_lon_);
 	const auto min_y = lat2ym(min_lat_);
 	metric_scale_ = std::max(dx, dy);
@@ -406,3 +417,4 @@ Model::~Model() {
 	PrintDebugMessage(APPLICATION_NAME, "Model", "destroying model...", false);
 	Release();
 }
+
