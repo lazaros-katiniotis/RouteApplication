@@ -30,7 +30,6 @@ namespace route_app {
 
         void InitializeAppData();
         bool StartAndEndNotInitialized();
-        void ApplyAspectRatioToStartAndEnd();
         void Release();
         void Exit(int code);
     public:
@@ -41,7 +40,7 @@ namespace route_app {
         void Initialize();
         void ReleaseParser();
         void HTTPRequest();
-        void ModelData();
+        bool ModelData();
         void FindRoute();
         void Render();
         void DisplayMap();
@@ -169,9 +168,10 @@ namespace route_app {
         }
     }
 
-    void RouteApplication::ModelData() {
+    bool RouteApplication::ModelData() {
         PrintDebugMessage(APPLICATION_NAME, "", "Creating model...", true);
         model_ = new Model(data_);
+        return model_->WasModelCreated();
     }
 
     void RouteApplication::FindRoute() {
@@ -211,10 +211,27 @@ namespace route_app {
     }
 
     RouteApplication::~RouteApplication() {
+        PrintDebugMessage(APPLICATION_NAME, "", "Releasing application resources...", true);
         Release();
     }
 
     void RouteApplication::Release() {
+        if (renderer_ != NULL) {
+            delete renderer_;
+            renderer_ = NULL;
+        }
+        if (model_ != NULL) {
+            delete model_;
+            model_ = NULL;
+        }
+        if (handler_ != NULL) {
+            delete handler_;
+            handler_ = NULL;
+        }
+        if (parser_ != NULL) {
+            delete parser_;
+            parser_ = NULL;
+        }
         if (data_ != NULL) {
             if (data_->sm == StorageMethod::MEMORY_STORAGE) {
                 delete data_->query_data->memory;
@@ -224,22 +241,6 @@ namespace route_app {
             }
             delete data_;
             data_ = NULL;
-        }
-        if (parser_ != NULL) {
-            delete parser_;
-            parser_ = NULL;
-        }
-        if (handler_ != NULL) {
-            delete handler_;
-            handler_ = NULL;
-        }
-        if (model_ != NULL) {
-            delete model_;
-            model_ = NULL;
-        }
-        if (renderer_ != NULL) {
-            delete renderer_;
-            renderer_ = NULL;
         }
     }
 
@@ -258,9 +259,10 @@ int main(int argc, char** argv) {
     if (routeApp->ParseCommandLineArguments(argc, argv)) {
         routeApp->Initialize();
         routeApp->HTTPRequest();
-        routeApp->ModelData();
-        routeApp->FindRoute();
-        routeApp->Render();
+        if (routeApp->ModelData()) {
+            routeApp->FindRoute();
+            routeApp->Render();
+        }
     }
     delete routeApp;
 }

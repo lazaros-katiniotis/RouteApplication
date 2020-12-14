@@ -75,8 +75,10 @@ namespace route_app {
         Node& GetEndingPoint() { return end_; }
         const Way& GetRoute() const { return route_; }
         double EuclideanDistance(Model::Node const node, Model::Node const other);
+        bool WasModelCreated() const;
     private:
         xml_document doc_;
+        bool model_created_;
         double min_lat_ = 0.;
         double max_lat_ = 0.;
         double min_lon_ = 0.;
@@ -107,7 +109,7 @@ namespace route_app {
         bool CheckPreviousNode(vector<int>::iterator it, vector<int>::iterator begin);
         bool CheckNextNode(vector<int>::iterator it, vector<int>::iterator end);
 
-        void OpenDocument(AppData* data);
+        xml_parse_result OpenDocument(AppData* data);
         void ParseData(AppData* data);
         void ParseBounds();
         void ParseNode(const xml_node& node, int& index);
@@ -118,9 +120,11 @@ namespace route_app {
         int FindNearestRoadNode(Node node);
         bool StartAStarSearch();
         vector<int> DiscoverNeighbourNodes(int current);
-        void AdjustCoordinates();
+        void AdjustCoordinates(AppData* data);
         void Release();
     };
+
+    bool inline Model::WasModelCreated() const { return model_created_; }
 
     double inline Model::GetAspectRatio() { return aspect_ratio_; }
 

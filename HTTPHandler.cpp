@@ -12,7 +12,7 @@ size_t write_callback(void* contents, size_t size, size_t nmemb, void* userp)
 
     char* ptr = (char*)realloc(mem->memory, mem->size + realsize + 1);
     if (ptr == NULL) {
-        printf("not enough memory (realloc returned NULL)\n");
+        PrintDebugMessage(APPLICATION_NAME, "HTTPHandler", "Error: Not enough memory (realloc returned NULL).", false);
         return 0;
     }
 
@@ -36,8 +36,6 @@ HTTPHandler::~HTTPHandler() {
 
 void HTTPHandler::Initialize() {
 	curl_global_init(CURL_GLOBAL_ALL);
-	//locale loc(std::locale(), new std::codecvt_utf8<char32_t>);
-    //response.imbue(loc);
 	PrintDebugMessage(APPLICATION_NAME, "HTTPHandler", "HTTP Request Handler initialized.", false);
 	PrintDebugMessage(APPLICATION_NAME, "HTTPHandler", "HTTP Request Query: " + query_, false);
 }
@@ -68,6 +66,6 @@ CURLcode HTTPHandler::Request(AppData *data) {
 }
 
 void HTTPHandler::Release() {
-    PrintDebugMessage(APPLICATION_NAME, "HTTPHandler", "releasing resources...", false);
+    PrintDebugMessage(APPLICATION_NAME, "HTTPHandler", "Releasing resources...", false);
 	curl_global_cleanup();
 }

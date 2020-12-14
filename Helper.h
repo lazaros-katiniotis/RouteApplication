@@ -8,7 +8,7 @@
 using namespace std;
 namespace route_app {
     class Model;
-    //struct Model::Node;
+
     static const string APPLICATION_NAME = "RouteApplication";
 
     enum class StorageMethod {

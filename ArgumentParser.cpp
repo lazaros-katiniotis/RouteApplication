@@ -13,6 +13,7 @@ ArgumentParser::ArgumentParser(const int& argc, char** argv) {
 }
 
 void ArgumentParser::Initialize(const int& argc, char** argv) {
+	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "Initializing argument parser...", true);
 	Reset();
 	previous_parser_state_ = current_parser_state_;
 	current_input_state_ = InputState::INVALID;
@@ -50,29 +51,14 @@ void ArgumentParser::CreateStateTable() {
 }
 
 bool ArgumentParser::SyntaxAnalysis(const int& argc, char** argv) {
-	int index = 1;
 	if (argc == 1) {
-		//-p 20.84872 39.66766 - f map.osm - start 0.5 0.5 - end 0.8 0.8
-		PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "Did not find any command line arguments. Using default values instead.", true);
-		PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "Generating a map of Athens, Greece.", false);
-		PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "bounds:\t[-b 23.7255 37.9666 23.7315 37.9705]", false);
-		PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "start:\t[-start 0.1 0.1]", false);
-		PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "end:\t[-end 0.9 0.9]", false);
-
-		bound_query_ = "23.7255,37.9666,23.7315,37.9705";
-		starting_point_.x = 0.1;
-		starting_point_.y = 0.1;
-		ending_point_.x = 0.9;
-		ending_point_.y = 0.9;
-		syntax_state_ = (int)SyntaxFlags::BOUNDS;
+		DefaultSyntaxExample();
 		return true;
 	}
-	cout << endl;
+
 	for (int i = 1; i < argc; i++) {
 		if (ParseArgument(argv[i]) == ParserState::ERROR_STATE) {
-			if (CheckForWrongArgumentError(argc, argv, i)) {
-				return false;
-			}
+			return !CheckForWrongArgumentError(argc, argv, i);
 		}
 
 		if (CheckForMissingArgumentError(argc, argv, i)) {
@@ -81,13 +67,28 @@ bool ArgumentParser::SyntaxAnalysis(const int& argc, char** argv) {
 
 		while (number_of_coordinates_to_parse >= 0) {
 			if (ParseArgument(argv[++i]) == ParserState::ERROR_STATE) {
-				if (CheckForWrongArgumentError(argc, argv, i)) {
-					return false;
-				}
+				return !CheckForWrongArgumentError(argc, argv, i);
 			}
 		}
 	}
 	return !CheckForSyntaxError();
+}
+
+void ArgumentParser::DefaultSyntaxExample() {
+	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "Did not find any command line arguments. Using default values instead.", true);
+	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "Example of correct command line argument usage:", false);
+	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "RouteApplication.exe -b 23.7255 37.9666 23.7315 37.9705 -start 0.1 0.1 -end 0.9 0.9", false);
+	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "Generating a map of Athens, Greece.", false);
+	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "bounds:\t[-b 23.7255 37.9666 23.7315 37.9705]", false);
+	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "start:\t[-start 0.1 0.1]", false);
+	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "end:\t[-end 0.9 0.9]", false);
+
+	bound_query_ = "23.7255,37.9666,23.7315,37.9705";
+	starting_point_.x = 0.1;
+	starting_point_.y = 0.1;
+	ending_point_.x = 0.9;
+	ending_point_.y = 0.9;
+	syntax_state_ = (int)SyntaxFlags::BOUNDS;
 }
 
 bool ArgumentParser::CheckForMissingArgumentError(const int& argc, char** argv, const int i) {
@@ -104,7 +105,6 @@ bool ArgumentParser::CheckForMissingArgumentError(const int& argc, char** argv, 
 }
 
 bool ArgumentParser::CheckForWrongArgumentError(const int& argc, char** argv, const int i) {
-	//if (current_input_state_ != InputState::COORDINATE) {
 		cout << "'";
 		for (int j = 0; j < argc; j++) {
 			if (argv[j] == argv[i]) {
@@ -119,8 +119,6 @@ bool ArgumentParser::CheckForWrongArgumentError(const int& argc, char** argv, co
 		}
 		cout << "'" << endl;
 		return true;
-	//}
-	//return false;
 }
 
 bool ArgumentParser::CheckForSyntaxError() {
@@ -136,18 +134,16 @@ bool ArgumentParser::CheckForSyntaxError() {
 	case (int)SyntaxFlags::POINT | (int)SyntaxFlags::FILE:
 		break;
 	default:
+		cout << "Error: Incorrect command line argument syntax. Must provide the application with an areas' bounds, a point coordinate or a OSM data file." << endl;
 		return true;
 	}
+	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "Syntax analysis completed successfully.", false);
 	return false;
 }
 
 ArgumentParser::ParserState ArgumentParser::ParseArgument(string_view arg) {
-	//cout << "previous_parser_state: " << (int)previous_parser_state_ << ", previous_input_state: " << (int)previous_input_state_ << endl;
-	//cout << "current_parser_state: " << (int)current_parser_state_ << ", curent_input_state: " << (int)current_input_state_ << endl;
 	UpdateInputState(arg);
 	UpdateParserState(arg);
-	//cout << "updated previous_parser_state: " << (int)previous_parser_state_ << ", updated previous_input_state: " << (int)previous_input_state_ << endl;
-	//cout << "updated current_parser_state: " << (int)current_parser_state_ << ", updated curent_input_state: " << (int)current_input_state_ << endl;
 	if (current_parser_state_ = ValidateParsingState(arg); current_parser_state_ != ParserState::ERROR_STATE) {
 		StoreData(arg);
 		ResetParsingState();
@@ -156,13 +152,11 @@ ArgumentParser::ParserState ArgumentParser::ParseArgument(string_view arg) {
 }
 
 void ArgumentParser::UpdateInputState(string_view arg) {
-	//cout << "Parsing argument: " << arg << endl;
 	InputState input_state_before_update = current_input_state_;
 	if (arg == "-b") {
 		current_input_state_ = InputState::BOUNDS_COMMAND;
 		syntax_state_ |= (int)SyntaxFlags::BOUNDS;
 		number_of_coordinates_to_parse = bound_coordinates_;
-		//cout << "Will need to parse the next " << number_of_coordinates_to_parse << " coordinates." << endl;
 	}
 	else if (arg == "-f") {
 		current_input_state_ = InputState::FILE_COMMAND;
@@ -172,18 +166,14 @@ void ArgumentParser::UpdateInputState(string_view arg) {
 		current_input_state_ = InputState::POINT_COMMAND;
 		syntax_state_ |= (int)SyntaxFlags::POINT;
 		number_of_coordinates_to_parse = point_coordinates_;
-		//cout << "Will need to parse the next " << point_coordinates_ << " coordinates." << endl;
 	}
 	else if (arg == "-start") {
 		current_input_state_ = InputState::START_POINT_COMMAND;
 		number_of_coordinates_to_parse = point_coordinates_;
-		//cout << "Will need to parse the next " << point_coordinates_ << " coordinates." << endl;
-
 	}
 	else if (arg == "-end") {
 		current_input_state_ = InputState::END_POINT_COMMAND;
 		number_of_coordinates_to_parse = point_coordinates_;
-		//cout << "Will need to parse the next " << point_coordinates_ << " coordinates." << endl;
 	}
 	else {
 		double result;
@@ -234,35 +224,28 @@ void ArgumentParser::StoreData(string_view arg) {
 	switch (previous_input_state_) {
 	case InputState::BOUNDS_COMMAND:
 		number_of_coordinates_to_parse--;
-		//cout << "Added '" << arg << "' to the query." << endl;
-		//cout << "number_of_coordinates_left_to_parse: " << number_of_coordinates_to_parse << endl;
 		if (number_of_coordinates_to_parse == 0) {
-			//cout << "Storing Bound Data" << endl;
 			InitializeBounds();
 		}
 		break;
 	case InputState::FILE_COMMAND:
 		filename_ = arg;
-		//cout << "FILENAME: " << arg << endl;
 		break;
 	case InputState::START_POINT_COMMAND:
 		number_of_coordinates_to_parse--;
 		if (number_of_coordinates_to_parse == 0) {
-			//cout << "Storing Start Data" << endl;
 			InitializePoint(starting_point_);
 		}
 		break;
 	case InputState::END_POINT_COMMAND:
 		number_of_coordinates_to_parse--;
 		if (number_of_coordinates_to_parse == 0) {
-			//cout << "Storing end Data" << endl;
 			InitializePoint(ending_point_);
 		}
 		break;
 	case InputState::POINT_COMMAND:
 		number_of_coordinates_to_parse--;
 		if (number_of_coordinates_to_parse == 0) {
-			//cout << "Storing point Data" << endl;
 			InitializePoint(point_);
 		}
 		break;
@@ -309,6 +292,7 @@ int inline ArgumentParser::StateTable::GetState(ParserState x, InputState y) con
 }
 
 void ArgumentParser::Release() {
+	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "Releasing parser resources...", false);
 	delete stateTable_;
 }
 

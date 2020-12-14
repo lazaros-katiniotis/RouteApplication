@@ -78,6 +78,7 @@ namespace route_app {
 		void StoreData(std::string_view arg);
 		void InitializePoint(Model::Node& node);
 		void InitializeBounds();
+		void DefaultSyntaxExample();
 		bool CheckForMissingArgumentError(const int& argc, char** argv, const int i);
 		bool CheckForWrongArgumentError(const int& argc, char** argv, const int i);
 		bool CheckForSyntaxError();

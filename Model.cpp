@@ -43,20 +43,15 @@ static Model::Landuse::Type StringToLanduseType(string_view type) {
 
 Model::Model(AppData* data) {
 	PrintDebugMessage(APPLICATION_NAME, "Model", "Initiating model...", false);
-	OpenDocument(data);
-	ParseData(data);
-	AdjustCoordinates();
-	cout << "ASPECT RATIO: " << aspect_ratio_ << endl;
-	if (aspect_ratio_ > 1) {
-		data->start.y /= GetAspectRatio();
-		data->end.y /= GetAspectRatio();
+	if (OpenDocument(data)) {
+		ParseData(data);
+		AdjustCoordinates(data);
+		model_created_ = true;
 	}
 	else {
-		data->start.x *= GetAspectRatio();
-		data->end.x *= GetAspectRatio();
+		PrintDebugMessage(APPLICATION_NAME, "Model", "Error: Failed to parse the xml file.", false);
+		model_created_ = false;
 	}
-
-
 }
 
 void Model::PrintData() {
@@ -90,7 +85,7 @@ void Model::PrintData() {
 	}
 }
 
-void Model::OpenDocument(AppData* data) {
+xml_parse_result Model::OpenDocument(AppData* data) {
 	xml_parse_result result;
 	errno_t err = NULL;
 
@@ -104,9 +99,7 @@ void Model::OpenDocument(AppData* data) {
 		result = doc_.load_buffer(data->query_data->memory, data->query_data->size);
 		break;
 	}
-	if (!result) {
-		throw std::logic_error("failed to parse the xml file.");
-	}
+	return result;
 }
 
 void Model::ParseData(AppData* data) {
@@ -379,7 +372,7 @@ bool Model::CheckNextNode(vector<int>::iterator it, vector<int>::iterator end) {
 	return false;
 }
 
-void Model::AdjustCoordinates() {
+void Model::AdjustCoordinates(AppData* data) {
 	PrintDebugMessage(APPLICATION_NAME, "Model", "Projecting node coordinates to cartesian coordinate system...", false);
 	const auto pi = 3.14159265358979323846264338327950288;
 	const auto deg_to_rad = 2. * pi / 360.;
@@ -389,6 +382,14 @@ void Model::AdjustCoordinates() {
 	const auto dx = lon2xm(max_lon_) - lon2xm(min_lon_);
 	const auto dy = lat2ym(max_lat_) - lat2ym(min_lat_);
 	aspect_ratio_ = dx / dy;
+	if (aspect_ratio_ > 1) {
+		data->start.y /= GetAspectRatio();
+		data->end.y /= GetAspectRatio();
+	}
+	else {
+		data->start.x *= GetAspectRatio();
+		data->end.x *= GetAspectRatio();
+	}
 	const auto min_x = lon2xm(min_lon_);
 	const auto min_y = lat2ym(min_lat_);
 	metric_scale_ = std::max(dx, dy);
@@ -410,11 +411,10 @@ void Model::InitializePoint(Node& point, Node& other) {
 }
 
 void Model::Release() {
-
+	PrintDebugMessage(APPLICATION_NAME, "Model", "Releasing model resoures...", false);
 }
 
 Model::~Model() {
-	PrintDebugMessage(APPLICATION_NAME, "Model", "destroying model...", false);
 	Release();
 }
 
