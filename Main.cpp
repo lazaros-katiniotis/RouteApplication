@@ -275,7 +275,7 @@ int main(int argc, char** argv) {
         if (routeApp->HTTPRequest()) {
             if (routeApp->ModelData()) {
                 routeApp->FindRoute();
-                    routeApp->Render();
+                routeApp->Render();
             }
         }
     }

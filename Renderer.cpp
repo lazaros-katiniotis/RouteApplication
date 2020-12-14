@@ -15,7 +15,7 @@ static point_2d ToPoint2D(const Model::Node& node) noexcept;
 
 Renderer::Renderer(Model *model) {
     model_ = model;
-    draw_route_ = (model_->GetNodes().size() != 0);
+    draw_route_ = (model_->GetRoads().size() != 0);
     BuildRoadReps();
     BuildLanduseBrushes();
 }
