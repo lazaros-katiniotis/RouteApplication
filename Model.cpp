@@ -411,7 +411,7 @@ void Model::InitializePoint(Node& point, Node& other) {
 }
 
 void Model::Release() {
-	PrintDebugMessage(APPLICATION_NAME, "Model", "Releasing model resoures...", false);
+
 }
 
 Model::~Model() {

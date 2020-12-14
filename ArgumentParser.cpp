@@ -77,17 +77,13 @@ bool ArgumentParser::SyntaxAnalysis(const int& argc, char** argv) {
 void ArgumentParser::DefaultSyntaxExample() {
 	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "Did not find any command line arguments. Using default values instead.", true);
 	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "Example of correct command line argument usage:", false);
-	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "RouteApplication.exe -b 23.7255 37.9666 23.7315 37.9705 -start 0.1 0.1 -end 0.9 0.9", false);
+	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "RouteApplication.exe -b 23.7255 37.9666 23.7315 37.9705 -start 0.25 0.25 -end 0.75 0.75", false);
 	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "Generating a map of Athens, Greece.", false);
 	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "bounds:\t[-b 23.7255 37.9666 23.7315 37.9705]", false);
-	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "start:\t[-start 0.1 0.1]", false);
-	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "end:\t[-end 0.9 0.9]", false);
+	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "start:\t[-start 0.25 0.25]", false);
+	PrintDebugMessage(APPLICATION_NAME, "ArgumentParser", "end:\t[-end 0.75 0.75]", false);
 
 	bound_query_ = "23.7255,37.9666,23.7315,37.9705";
-	starting_point_.x = 0.1;
-	starting_point_.y = 0.1;
-	ending_point_.x = 0.9;
-	ending_point_.y = 0.9;
 	syntax_state_ = (int)SyntaxFlags::BOUNDS;
 }
 

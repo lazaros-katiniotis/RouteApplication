@@ -41,7 +41,7 @@ void HTTPHandler::Initialize() {
 }
 
 CURLcode HTTPHandler::Request(AppData *data) {
-    PrintDebugMessage(APPLICATION_NAME, "HTTPHandler", "Initiating HTTP Request...", false);
+    PrintDebugMessage(APPLICATION_NAME, "HTTPHandler", "Initiating HTTP request...", false);
     CURL* curl_handle;
     CURLcode res{};
     curl_handle = curl_easy_init();

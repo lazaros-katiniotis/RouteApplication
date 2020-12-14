@@ -14,13 +14,13 @@ using namespace std;
 namespace io2d = std::experimental::io2d;
 
 namespace route_app {
-    
+
     class RouteApplication {
     private:
-        AppData *data_ = NULL;
-        HTTPHandler *handler_ = NULL;
-        Model *model_ = NULL;
-        Renderer *renderer_ = NULL;
+        AppData* data_ = NULL;
+        HTTPHandler* handler_ = NULL;
+        Model* model_ = NULL;
+        Renderer* renderer_ = NULL;
         ArgumentParser* parser_ = NULL;
         string url_;
         string api_;
@@ -29,7 +29,7 @@ namespace route_app {
         bool download_osm_data_;
 
         void InitializeAppData();
-        bool StartAndEndNotInitialized();
+        void InitializeStartAndEnd();
         void Release();
         void Exit(int code);
     public:
@@ -39,7 +39,8 @@ namespace route_app {
         bool ParseCommandLineArguments(int argc, char** argv);
         void Initialize();
         void ReleaseParser();
-        void HTTPRequest();
+        void ReleaseHTTPHandler();
+        bool HTTPRequest();
         bool ModelData();
         void FindRoute();
         void Render();
@@ -118,53 +119,64 @@ namespace route_app {
             data_->sm = StorageMethod::FILE_STORAGE;
             break;
         }
-        if (StartAndEndNotInitialized()) {
-            data_->start.x = 0.1;
-            data_->start.y = 0.1;
-            data_->end.x = 0.9;
-            data_->end.y = 0.9;
-        }
-        else {
-            data_->start.x = parser_->GetStartingPoint().x;
-            data_->start.y = parser_->GetStartingPoint().y;
-            data_->end.x = parser_->GetEndingPoint().x;
-            data_->end.y = parser_->GetEndingPoint().y;
-        }
+
+        InitializeStartAndEnd();
 
         errno_t error;
         switch (data_->sm) {
-            case StorageMethod::FILE_STORAGE:
-                data_->query_file = new QueryFile();
-                data_->query_file->filename = parser_->GetFilename();
-                _set_errno(0);
-                error = fopen_s(&data_->query_file->file, data_->query_file->filename.c_str(), file_mode.c_str());
-                if (error != 0) {
-                    PrintDebugMessage(APPLICATION_NAME, "", "Error opening file '" + data_->query_file->filename + "'.", false);
-                    Exit(EXIT_FAILURE);
-                }
-                break;
-            case StorageMethod::MEMORY_STORAGE:
-                data_->query_data = new QueryData();
-                data_->query_data->memory = new char(1);
-                data_->query_data->size = 0;
-                data_->query_data->callback_count = 0;
+        case StorageMethod::FILE_STORAGE:
+            data_->query_file = new QueryFile();
+            data_->query_file->filename = parser_->GetFilename();
+            _set_errno(0);
+            error = fopen_s(&data_->query_file->file, data_->query_file->filename.c_str(), file_mode.c_str());
+            if (error != 0) {
+                PrintDebugMessage(APPLICATION_NAME, "", "Error opening file '" + data_->query_file->filename + "'.", false);
+                Exit(EXIT_FAILURE);
+            }
+            break;
+        case StorageMethod::MEMORY_STORAGE:
+            data_->query_data = new QueryData();
+            data_->query_data->memory = new char(1);
+            data_->query_data->size = 0;
+            data_->query_data->callback_count = 0;
             break;
         }
     }
 
-    bool RouteApplication::StartAndEndNotInitialized() {
-        if (parser_->GetStartingPoint().x == 0 && parser_->GetStartingPoint().y == 0 &&
-            parser_->GetEndingPoint().x == 0 && parser_->GetStartingPoint().y == 0) {
-            return true;
+    void RouteApplication::InitializeStartAndEnd() {
+        if (parser_->GetStartingPoint().x == 0 && parser_->GetStartingPoint().y == 0) {
+            data_->start.x = 0.25;
+            data_->start.y = 0.25;
         }
-        return false;
+        else {
+            data_->start.x = parser_->GetStartingPoint().x;
+            data_->start.y = parser_->GetStartingPoint().y;
+        }
+
+        if (parser_->GetEndingPoint().x == 0 && parser_->GetStartingPoint().y == 0) {
+            data_->end.x = 0.75;
+            data_->end.y = 0.75;
+        }
+        else {
+            data_->end.x = parser_->GetEndingPoint().x;
+            data_->end.y = parser_->GetEndingPoint().y;
+        }
     }
 
-    void RouteApplication::HTTPRequest() {
+    bool RouteApplication::HTTPRequest() {
         if (download_osm_data_) {
             PrintDebugMessage(APPLICATION_NAME, "", "Initializing HTTP request query...", true);
             handler_ = new HTTPHandler(url_, api_, query_prefix_ + query_bounds_);
-            handler_->Request(data_);
+            CURLcode code = handler_->Request(data_);
+            ReleaseHTTPHandler();
+            if (code == CURLE_OK) {
+                PrintDebugMessage(APPLICATION_NAME, "", "HTTP request successful.", false);
+                return true;
+            }
+            else {
+                cout << "Error: HTTP request unsuccessful, CURL error code is '" << code << "'." << endl;
+                return false;
+            }
         }
     }
 
@@ -194,20 +206,13 @@ namespace route_app {
 
         display.size_change_callback([&](io2d::output_surface& surface) {
             renderer_->Resize(surface);
-        });
+            });
 
         display.draw_callback([&](io2d::output_surface& surface) {
             renderer_->Display(surface);
-        });
+            });
 
         display.begin_show();
-    }
-
-    void RouteApplication::ReleaseParser() {
-        if (parser_ != NULL) {
-            delete parser_;
-            parser_ = NULL;
-        }
     }
 
     RouteApplication::~RouteApplication() {
@@ -224,14 +229,8 @@ namespace route_app {
             delete model_;
             model_ = NULL;
         }
-        if (handler_ != NULL) {
-            delete handler_;
-            handler_ = NULL;
-        }
-        if (parser_ != NULL) {
-            delete parser_;
-            parser_ = NULL;
-        }
+        ReleaseHTTPHandler();
+        ReleaseParser();
         if (data_ != NULL) {
             if (data_->sm == StorageMethod::MEMORY_STORAGE) {
                 delete data_->query_data->memory;
@@ -241,6 +240,21 @@ namespace route_app {
             }
             delete data_;
             data_ = NULL;
+        }
+    }
+
+
+    void RouteApplication::ReleaseParser() {
+        if (parser_ != NULL) {
+            delete parser_;
+            parser_ = NULL;
+        }
+    }
+
+    void RouteApplication::ReleaseHTTPHandler() {
+        if (handler_ != NULL) {
+            delete handler_;
+            handler_ = NULL;
         }
     }
 
@@ -258,10 +272,11 @@ int main(int argc, char** argv) {
     route_app::RouteApplication *routeApp = new route_app::RouteApplication(argc, argv);
     if (routeApp->ParseCommandLineArguments(argc, argv)) {
         routeApp->Initialize();
-        routeApp->HTTPRequest();
-        if (routeApp->ModelData()) {
-            routeApp->FindRoute();
-            routeApp->Render();
+        if (routeApp->HTTPRequest()) {
+            if (routeApp->ModelData()) {
+                routeApp->FindRoute();
+                    routeApp->Render();
+            }
         }
     }
     delete routeApp;
