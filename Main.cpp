@@ -211,7 +211,6 @@ namespace route_app {
         display.draw_callback([&](io2d::output_surface& surface) {
             renderer_->Display(surface);
             });
-
         display.begin_show();
     }
 
