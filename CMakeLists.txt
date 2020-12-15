@@ -10,14 +10,18 @@ find_package(CURL CONFIG REQUIRED)
 find_package(pugixml CONFIG REQUIRED)
 
 set(ROUTE_APP_SRC
-    Helper.h
-    Main.cpp
-    HTTPHandler.cpp
-    HTTPHandler.h
-    Renderer.cpp
-    Renderer.h
-    Model.cpp
-    Model.h
+	Helper.h
+	Main.cpp
+	HTTPHandler.cpp
+	HTTPHandler.h
+	Renderer.cpp
+	Renderer.h
+	Model.cpp
+	Model.h
+	ArgumentParser.cpp
+	ArgumentParser.h
+	Pathfinder.cpp
+	Pathfinder.h	
 )
 
 add_executable(${PROJECT_ID} ${ROUTE_APP_SRC})
@@ -26,14 +30,3 @@ target_compile_features(${PROJECT_ID} PUBLIC cxx_std_17)
 target_link_libraries(${PROJECT_ID} io2d)
 target_link_libraries(${PROJECT_ID} CURL::libcurl)
 target_link_libraries(${PROJECT_ID} pugixml)
-
-#if( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" )
-#    list(APPEND CPULOAD_SRC profiler_mach.cpp)
-#elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
-#    list(APPEND CPULOAD_SRC profiler_nt.cpp)
-#elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
-#    list(APPEND CPULOAD_SRC profiler_linux.cpp)
-#else()
-#    message( "CPULoad doesn't have a profiler for this platform, thus skipping." )
-#    return()
-#endif()
