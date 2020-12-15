@@ -40,6 +40,7 @@ namespace route_app {
         static string GetApplicationName();
         bool ParseCommandLineArguments(int argc, char** argv);
         void Initialize();
+        void ReleasePathfinder();
         void ReleaseParser();
         void ReleaseHTTPHandler();
         bool HTTPRequest();
@@ -196,6 +197,7 @@ namespace route_app {
         PrintDebugMessage(APPLICATION_NAME, "", "Finding route...", true);
         pathfinder_ = new Pathfinder(model_, data_);
         pathfinder_->CreateRoute();
+        ReleasePathfinder();
     }
 
     void RouteApplication::Render() {
@@ -233,10 +235,7 @@ namespace route_app {
             delete model_;
             model_ = NULL;
         }
-        if (pathfinder_ != NULL) {
-            delete pathfinder_;
-            pathfinder_ = NULL;
-        }
+        ReleasePathfinder();
         ReleaseHTTPHandler();
         ReleaseParser();
         if (data_ != NULL) {
@@ -251,6 +250,12 @@ namespace route_app {
         }
     }
 
+    void RouteApplication::ReleasePathfinder() {
+        if (pathfinder_ != NULL) {
+            delete pathfinder_;
+            pathfinder_ = NULL;
+        }
+    }
 
     void RouteApplication::ReleaseParser() {
         if (parser_ != NULL) {

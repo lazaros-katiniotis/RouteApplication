@@ -66,7 +66,7 @@ namespace route_app {
         auto& GetLanduses() { return landuses_; }
         auto& GetLeisures() { return leisures_; }
         auto& GetWaters() { return waters_; }
-        auto& GetNodes() { return nodes_; }
+        auto& GetNodes() const { return nodes_; }
         auto& GetWays() const { return ways_; }
         auto GetNodeNumberToRoadNumber() const { return node_number_to_road_numbers_; }
         bool WasModelCreated() const;
