@@ -35,5 +35,8 @@ Initiates a HTTP request for a small rectangular region arround a point of the *
     -start x y -end x y
 Initializes the starting and ending point of the route. *x* and *y* are coordinates relative to the application window, with a range of values [0,1].
 
+## Example
+The following example downloads a bounding area of map data, initializes a starting and ending point for the route calculation, and stores the data downloaded in a file named *example.osm*
+    ./RouteApplication.exe -b 23.7255 37.9666 23.7315 37.9705 -start 0.25 0.25 -end 0.75 0.75 -f example.osm
 ## License
 Under MIT License.
