@@ -3,6 +3,8 @@
 #define ROUTE_APP_PATHFINDER_H
 
 #include "Model.h"
+#include <map>
+#include <set>
 
 using namespace std;
 namespace route_app {

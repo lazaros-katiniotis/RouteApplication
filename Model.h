@@ -1,12 +1,10 @@
 #pragma once
 #ifndef ROUTE_APP_MODEL_H
 #define ROUTE_APP_MODEL_H
-#include <iostream>
+
 #include <pugixml.hpp>
-#include <vector>
-#include <map>
-#include <set>
 #include <unordered_map>
+#include <vector>
 
 using namespace std;
 using namespace pugi;

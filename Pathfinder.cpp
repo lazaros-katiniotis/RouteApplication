@@ -1,4 +1,3 @@
-#include <iostream>
 #include "Helper.h"
 #include "Pathfinder.h"
 
@@ -12,7 +11,7 @@ Pathfinder::Pathfinder(Model* model, AppData* data) {
 }
 
 void Pathfinder::Initialize(AppData* data) {
-	int size = nodes_.size();
+	size_t size = nodes_.size();
 	node_distance_from_start_ = new double[size];
 	for (int i = 0; i < size; i++) {
 		node_distance_from_start_[i] = 0.0f;

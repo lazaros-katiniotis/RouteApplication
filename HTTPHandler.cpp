@@ -1,6 +1,5 @@
 #include <iostream>
 #include <curl/curl.h>
-
 #include "HTTPHandler.h"
 
 using namespace route_app;

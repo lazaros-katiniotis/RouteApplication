@@ -1,7 +1,7 @@
 #pragma once
 #ifndef ROUTE_APP_RENDERER_H
 #define ROUTE_APP_RENDERER_H
-#include <iostream>
+
 #include "Model.h"
 #include <io2d.h>
 

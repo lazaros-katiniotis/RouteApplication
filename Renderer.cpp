@@ -1,6 +1,4 @@
-#include <iostream>
 #include <io2d.h>
-
 #include "Model.h"
 #include "Renderer.h"
 

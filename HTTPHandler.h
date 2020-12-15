@@ -1,9 +1,8 @@
 #pragma once
 #ifndef ROUTE_APP_HTTP_HANDLER_H
 #define ROUTE_APP_HTTP_HANDLER_H
-#include <iostream>
-#include <curl/curl.h>
 
+#include <curl/curl.h>
 #include "Helper.h"
 
 using namespace std;

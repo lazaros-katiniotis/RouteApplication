@@ -1,12 +1,9 @@
 #include <iostream>
-#include <pugixml.hpp>
-#include <locale>
 #include <cmath>
 #include <algorithm>
+#include <cassert>
 #include "Model.h"
 #include "Helper.h"
-#include <chrono>
-#include <cassert>
 
 using namespace pugi;
 using namespace route_app;

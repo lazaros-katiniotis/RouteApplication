@@ -1,10 +1,4 @@
-﻿#include <iostream>
-#include <fstream>
-#include <cstdlib>
-#include <fcntl.h>
-#include <io.h>
-#include <io2d.h>
-
+﻿#include <io2d.h>
 #include "Helper.h"
 #include "ArgumentParser.h"
 #include "HTTPHandler.h"
