@@ -6,8 +6,9 @@
 #include <io2d.h>
 
 #include "Helper.h"
-#include "HTTPHandler.h"
 #include "ArgumentParser.h"
+#include "HTTPHandler.h"
+#include "Pathfinder.h"
 #include "Renderer.h"
 
 using namespace std;
@@ -22,6 +23,7 @@ namespace route_app {
         Model* model_ = NULL;
         Renderer* renderer_ = NULL;
         ArgumentParser* parser_ = NULL;
+        Pathfinder* pathfinder_ = NULL;
         string url_;
         string api_;
         string query_prefix_;
@@ -88,6 +90,7 @@ namespace route_app {
 
     void RouteApplication::InitializeAppData() {
         data_ = new AppData();
+        data_->use_aspect_ratio = true;
         string file_mode;
 
         using S = ArgumentParser::SyntaxFlags;
@@ -107,12 +110,14 @@ namespace route_app {
             data_->point.x = parser_->GetPoint().x;
             data_->point.y = parser_->GetPoint().y;
             data_->sm = StorageMethod::MEMORY_STORAGE;
+            data_->use_aspect_ratio = false;
             break;
         case (int)S::POINT | (int)S::FILE:
             data_->point.x = parser_->GetPoint().x;
             data_->point.y = parser_->GetPoint().y;
             file_mode = "w";
             data_->sm = StorageMethod::FILE_STORAGE;
+            data_->use_aspect_ratio = false;
             break;
         default:
             file_mode = "w";
@@ -178,6 +183,7 @@ namespace route_app {
                 return false;
             }
         }
+        return true;
     }
 
     bool RouteApplication::ModelData() {
@@ -188,10 +194,8 @@ namespace route_app {
 
     void RouteApplication::FindRoute() {
         PrintDebugMessage(APPLICATION_NAME, "", "Finding route...", true);
-
-        model_->InitializePoint(model_->GetStartingPoint(), data_->start);
-        model_->InitializePoint(model_->GetEndingPoint(), data_->end);
-        model_->CreateRoute();
+        pathfinder_ = new Pathfinder(model_, data_);
+        pathfinder_->CreateRoute();
     }
 
     void RouteApplication::Render() {
@@ -228,6 +232,10 @@ namespace route_app {
         if (model_ != NULL) {
             delete model_;
             model_ = NULL;
+        }
+        if (pathfinder_ != NULL) {
+            delete pathfinder_;
+            pathfinder_ = NULL;
         }
         ReleaseHTTPHandler();
         ReleaseParser();

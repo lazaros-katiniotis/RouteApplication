@@ -6,6 +6,7 @@
 #include "Model.h"
 #include "Helper.h"
 #include <chrono>
+#include <cassert>
 
 using namespace pugi;
 using namespace route_app;
@@ -46,6 +47,7 @@ Model::Model(AppData* data) {
 	if (OpenDocument(data)) {
 		ParseData(data);
 		AdjustCoordinates(data);
+		CreateRoadGraph();
 		model_created_ = true;
 	}
 	else {
@@ -76,7 +78,7 @@ void Model::PrintData() {
 
 	PrintDebugMessage(APPLICATION_NAME, "Model", "Printing node_number_to_road_numbers values...", true);
 	for (int index = 0; index < nodes_.size(); index++) {
-		if (auto it = node_number_to_road_numbers.find(index); it != node_number_to_road_numbers.end()) {
+		if (auto it = node_number_to_road_numbers_.find(index); it != node_number_to_road_numbers_.end()) {
 			cout << "node: " << index << endl;
 			for (auto road_number = it->second.begin(); road_number != it->second.end(); road_number++) {
 				cout << "road name: " << roads_[*road_number].name << "(" << *road_number << ")" << endl;
@@ -120,6 +122,10 @@ void Model::ParseData(AppData* data) {
 		for (const xpath_node& child : way.node().children()) {
 			ParseAttributes(child.node(), index);
 		}
+	}
+
+	for (const xpath_node& relation : doc_.select_nodes("/osm/relation")) {
+		ParseRelations(relation.node(), index);
 	}
 }
 
@@ -219,44 +225,47 @@ void Model::ParseAttributes(const xml_node& node, int index) {
 	}
 }
 
-void Model::CreateRoute() {
-	PrintDebugMessage(APPLICATION_NAME, "Model", "Creating route...", false);
-	CreateRoadGraph();
-	InitializePathfindingData();
-	start_node_index_ = FindNearestRoadNode(start_);
-	end_node_index_ = FindNearestRoadNode(end_);
-
-	bool found = false;
-	if (start_node_index_ != -1 && end_node_index_ != -1) {
-		found = StartAStarSearch();
-		open_list_.clear();
-		closed_list_.clear();
-	}
-
-	delete[] node_distance_from_start_;
-
-	if (found) {
-		route_.nodes.clear();
-		Node node_it = nodes_[end_node_index_];
-		route_.nodes.emplace_back(end_node_index_);
-		set<int> visited_nodes_indices;
-		while (node_it.parent != -1) {
-			if (auto index = visited_nodes_indices.find(node_it.parent); index != visited_nodes_indices.end()) {
+void Model::ParseRelations(const xpath_node& relation, int& index) {
+	auto node = relation.node();
+	std::vector<int> outer, inner;
+	auto commit = [&](Multipolygon& mp) {
+		mp.outer = std::move(outer);
+		mp.inner = std::move(inner);
+	};
+	for (auto child : node.children()) {
+		auto name = std::string_view{ child.name() };
+		if (name == "member") {
+			if (std::string_view{ child.attribute("type").as_string() } == "way") {
+				if (!way_id_to_number_.count(child.attribute("ref").as_string()))
+					continue;
+				auto way_num = way_id_to_number_[child.attribute("ref").as_string()];
+				if (std::string_view{ child.attribute("role").as_string() } == "outer")
+					outer.emplace_back(way_num);
+				else
+					inner.emplace_back(way_num);
+			}
+		}
+		else if (name == "tag") {
+			auto category = std::string_view{ child.attribute("k").as_string() };
+			auto type = std::string_view{ child.attribute("v").as_string() };
+			if (category == "building") {
+				commit(buildings_.emplace_back());
 				break;
 			}
-			route_.nodes.emplace_back(node_it.parent);
-			visited_nodes_indices.insert(node_it.parent);
-			node_it = nodes_[node_it.parent];
+			if (category == "natural" && type == "water") {
+				commit(waters_.emplace_back());
+				BuildRings(waters_.back());
+				break;
+			}
+			if (category == "landuse") {
+				if (auto landuse_type = StringToLanduseType(type); landuse_type != Landuse::Invalid) {
+					commit(landuses_.emplace_back());
+					landuses_.back().type = landuse_type;
+					BuildRings(landuses_.back());
+				}
+				break;
+			}
 		}
-		visited_nodes_indices.clear();
-	}
-}
-
-void Model::InitializePathfindingData() {
-	int size = nodes_.size();
-	node_distance_from_start_ = new double[size];
-	for (int i = 0; i < size; i++) {
-		node_distance_from_start_[i] = 0.0f;
 	}
 }
 
@@ -268,108 +277,96 @@ void Model::CreateRoadGraph() {
 	for (int i = 0; i < roads_.size(); i++) {
 		auto& way = ways_[roads_[i].way];
 		for (auto node_number = way.nodes.begin(); node_number != way.nodes.end(); node_number++) {
-			node_number_to_road_numbers[*node_number].emplace_back(i);
+			node_number_to_road_numbers_[*node_number].emplace_back(i);
 		}
 	}
 }
 
-int Model::FindNearestRoadNode(Node node) {
-	int closest_node_index = -1;
-	double minimum_distance = INFINITY;
-	double distance = 0;
-	for (auto it = node_number_to_road_numbers.begin(); it != node_number_to_road_numbers.end(); it++) {
-		distance = EuclideanDistance(node, nodes_[it->first]);
-		if (distance < minimum_distance) {
-			minimum_distance = distance;
-			closest_node_index = it->first;
-		}
+static bool TrackRec(const std::vector<int>& open_ways,
+	const Model::Way* ways,
+	std::vector<bool>& used,
+	std::vector<int>& nodes)
+{
+	if (nodes.empty()) {
+		for (int i = 0; i < open_ways.size(); ++i)
+			if (!used[i]) {
+				used[i] = true;
+				const auto& way_nodes = ways[open_ways[i]].nodes;
+				nodes = way_nodes;
+				if (TrackRec(open_ways, ways, used, nodes))
+					return true;
+				nodes.clear();
+				used[i] = false;
+			}
+		return false;
 	}
-	route_.nodes.emplace_back(closest_node_index);
-	return closest_node_index;
+	else {
+		const auto head = nodes.front();
+		const auto tail = nodes.back();
+		if (head == tail && nodes.size() > 1)
+			return true;
+		for (int i = 0; i < open_ways.size(); ++i)
+			if (!used[i]) {
+				const auto& way_nodes = ways[open_ways[i]].nodes;
+				const auto way_head = way_nodes.front();
+				const auto way_tail = way_nodes.back();
+				if (way_head == tail || way_tail == tail) {
+					used[i] = true;
+					const auto len = nodes.size();
+					if (way_head == tail)
+						nodes.insert(nodes.end(), way_nodes.begin(), way_nodes.end());
+					else
+						nodes.insert(nodes.end(), way_nodes.rbegin(), way_nodes.rend());
+					if (TrackRec(open_ways, ways, used, nodes))
+						return true;
+					nodes.resize(len);
+					used[i] = false;
+				}
+			}
+		return false;
+	}
 }
 
-bool Model::StartAStarSearch() {
-	open_list_[nodes_[start_node_index_]] = start_node_index_;
-	while (!open_list_.empty()) {
-		int current = open_list_.begin()->second;
-		open_list_.erase(open_list_.begin());
-		double f = 0.0f;
-		double h = 0.0f;
-		double distance = 0.0f;
-		vector<int> new_neighbour_nodes = DiscoverNeighbourNodes(current);
-		for (auto it = new_neighbour_nodes.begin(); it != new_neighbour_nodes.end(); it++) {
-			distance = EuclideanDistance(nodes_[*it], nodes_[current]);
-			node_distance_from_start_[*it] = node_distance_from_start_[current] + distance;
-			h = EuclideanDistance(nodes_[*it], nodes_[end_node_index_]);
-			f = node_distance_from_start_[*it] + h;
-
-			if (*it == end_node_index_) {
-				nodes_[*it].f = f;
-				nodes_[*it].h = h;
-				nodes_[*it].parent = current;
-				return true;
-			}
-
-			bool already_in_open_list = false;
-			if (auto other_it = open_list_.find(nodes_[*it]); other_it != open_list_.end()) {
-				already_in_open_list = true;
-				if (nodes_[other_it->second].f < f) {
-					continue;
-				}
-			}
-
-			if (auto other_it = closed_list_.find(*it); other_it != closed_list_.end()) {
-				if (nodes_[*other_it].f < f) {
-					continue;
-				}
-			}
-			nodes_[*it].f = f;
-			nodes_[*it].h = h;
-			nodes_[*it].parent = current;
-			if (already_in_open_list) {
-				open_list_.erase(nodes_[*it]);
-			}
-			open_list_[nodes_[*it]] = *it;
-		}
-		new_neighbour_nodes.clear();
-		closed_list_.insert(current);
-	}
-	return false;
+static std::vector<int> Track(std::vector<int>& open_ways, const Model::Way* ways)
+{
+	assert(!open_ways.empty());
+	std::vector<bool> used(open_ways.size(), false);
+	std::vector<int> nodes;
+	if (TrackRec(open_ways, ways, used, nodes))
+		for (int i = 0; i < open_ways.size(); ++i)
+			if (used[i])
+				open_ways[i] = -1;
+	return nodes;
 }
 
-vector<int> Model::DiscoverNeighbourNodes(int current) {
-	vector<int> neighbour_nodes;
-	auto& roads = node_number_to_road_numbers[current];
-	for (auto road = roads.begin(); road != roads.end(); road++) {
-		int index = *road;
-		int way = roads_[index].way;
-		for (auto it = ways_[way].nodes.begin(); it != ways_[way].nodes.end(); it++) {
-			if (current == *it) {
-				if (CheckPreviousNode(it, ways_[way].nodes.begin())) {
-					neighbour_nodes.emplace_back(*std::prev(it));
-				}
-				if (CheckNextNode(it, ways_[way].nodes.end())) {
-					neighbour_nodes.emplace_back(*std::next(it));
-				}
+void Model::BuildRings(Multipolygon& mp)
+{
+	auto is_closed = [](const Model::Way& way) {
+		return way.nodes.size() > 1 && way.nodes.front() == way.nodes.back();
+	};
+
+	auto process = [&](std::vector<int>& ways_nums) {
+		auto ways = ways_.data();
+		std::vector<int> closed, open;
+
+		for (auto& way_num : ways_nums)
+			(is_closed(ways[way_num]) ? closed : open).emplace_back(way_num);
+
+		while (!open.empty()) {
+			auto new_nodes = Track(open, ways);
+			if (new_nodes.empty())
 				break;
-			}
+			open.erase(std::remove_if(open.begin(), open.end(), [](auto v) {return v < 0; }), open.end());
+			closed.emplace_back((int)ways_.size());
+			Model::Way new_way;
+			new_way.nodes = std::move(new_nodes);
+			ways_.emplace_back(new_way);
 		}
-	}
-	return neighbour_nodes;
-}
+		std::swap(ways_nums, closed);
+	};
 
-bool Model::CheckPreviousNode(vector<int>::iterator it, vector<int>::iterator begin) {
-	if (it != begin) {
-		return true;
-	}
-	return false;
-}
-
-bool Model::CheckNextNode(vector<int>::iterator it, vector<int>::iterator end) {
-	if (it + 1 != end) {
-		return true;
-	}
-	return false;
+	process(mp.outer);
+	process(mp.inner);
 }
 
 void Model::AdjustCoordinates(AppData* data) {
@@ -381,15 +378,23 @@ void Model::AdjustCoordinates(AppData* data) {
 	const auto lon2xm = [&](double lon) { return lon * deg_to_rad / 2 * earth_radius; };
 	const auto dx = lon2xm(max_lon_) - lon2xm(min_lon_);
 	const auto dy = lat2ym(max_lat_) - lat2ym(min_lat_);
-	aspect_ratio_ = dx / dy;
+
+	if (data->use_aspect_ratio) {
+		aspect_ratio_ = dx / dy;
+	}
+	else {
+		aspect_ratio_ = 1;
+	}
+
 	if (aspect_ratio_ > 1) {
 		data->start.y /= GetAspectRatio();
 		data->end.y /= GetAspectRatio();
 	}
-	else {
+	else if (aspect_ratio_ < 1) {
 		data->start.x *= GetAspectRatio();
 		data->end.x *= GetAspectRatio();
 	}
+
 	const auto min_x = lon2xm(min_lon_);
 	const auto min_y = lat2ym(min_lat_);
 	metric_scale_ = std::max(dx, dy);
@@ -400,12 +405,7 @@ void Model::AdjustCoordinates(AppData* data) {
 	}
 }
 
-void Model::InitializePoint(Node& point, double x, double y) {
-	point.x = x;
-	point.y = y;
-}
-
-void Model::InitializePoint(Node& point, Node& other) {
+void Model::InitializePoint(Model::Node& point, Model::Node& other) {
 	point.x = other.x;
 	point.y = other.y;
 }

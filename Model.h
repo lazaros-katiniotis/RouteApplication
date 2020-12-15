@@ -66,16 +66,14 @@ namespace route_app {
         auto& GetLanduses() { return landuses_; }
         auto& GetLeisures() { return leisures_; }
         auto& GetWaters() { return waters_; }
-        void InitializePoint(Node& point, double x, double y);
-        void InitializePoint(Node& point, Node& other);
-        void CreateRoute();
-        const vector<Node>& GetNodes() const noexcept { return nodes_; }
-        const vector<Way>& GetWays() const noexcept { return ways_; }
-        Node& GetStartingPoint() { return start_; }
-        Node& GetEndingPoint() { return end_; }
-        const Way& GetRoute() const { return route_; }
-        double EuclideanDistance(Model::Node const node, Model::Node const other);
+        auto& GetNodes() { return nodes_; }
+        auto& GetWays() const { return ways_; }
+        auto GetNodeNumberToRoadNumber() const { return node_number_to_road_numbers_; }
         bool WasModelCreated() const;
+        Way& GetRoute() { return route_; }
+        void InitializePoint(Node& point, Node& other);
+        Model::Node& GetStartingPoint() { return start_; }
+        Model::Node& GetEndingPoint() { return end_; }
     private:
         xml_document doc_;
         bool model_created_;
@@ -87,7 +85,7 @@ namespace route_app {
         double aspect_ratio_;
         unordered_map<string, int> node_id_to_number_;
         unordered_map<string, int> way_id_to_number_;
-        unordered_map<int, vector<int>> node_number_to_road_numbers;
+        unordered_map<int, vector<int>> node_number_to_road_numbers_;
         vector<Building> buildings_;
         vector<Railway> railways_;
         vector<Landuse> landuses_;
@@ -96,41 +94,26 @@ namespace route_app {
         vector<Road> roads_;
         vector<Node> nodes_;
         vector<Way> ways_;
-
         Way route_;
         Node start_;
         Node end_;
-        int start_node_index_;
-        int end_node_index_;
-        double* node_distance_from_start_;
-        map<Node, int> open_list_;
-        set<int> closed_list_;
-
-        bool CheckPreviousNode(vector<int>::iterator it, vector<int>::iterator begin);
-        bool CheckNextNode(vector<int>::iterator it, vector<int>::iterator end);
 
         xml_parse_result OpenDocument(AppData* data);
         void ParseData(AppData* data);
         void ParseBounds();
         void ParseNode(const xml_node& node, int& index);
         void ParseAttributes(const xml_node& node, int index);
+        void ParseRelations(const xpath_node& relation, int& index);
         void PrintData();
-        void InitializePathfindingData();
         void CreateRoadGraph();
-        int FindNearestRoadNode(Node node);
-        bool StartAStarSearch();
-        vector<int> DiscoverNeighbourNodes(int current);
         void AdjustCoordinates(AppData* data);
+        void BuildRings(Multipolygon& mp);
         void Release();
     };
 
     bool inline Model::WasModelCreated() const { return model_created_; }
 
     double inline Model::GetAspectRatio() { return aspect_ratio_; }
-
-    double inline Model::EuclideanDistance(Model::Node const node, Model::Node const other) {
-        return sqrt(pow(node.x - other.x, 2) + pow(node.y - other.y, 2));
-    }
 }
 
 #endif

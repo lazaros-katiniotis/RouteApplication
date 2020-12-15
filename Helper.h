@@ -33,6 +33,7 @@ namespace route_app {
         Model::Node point;
         Model::Node start;
         Model::Node end;
+        bool use_aspect_ratio;
     };
 
     static void CloseFile(QueryFile* query_file) {

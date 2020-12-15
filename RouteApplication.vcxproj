@@ -145,6 +145,7 @@
     <ClCompile Include="HTTPHandler.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Model.cpp" />
+    <ClCompile Include="Pathfinder.cpp" />
     <ClCompile Include="Renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -152,6 +153,7 @@
     <ClInclude Include="Helper.h" />
     <ClInclude Include="HTTPHandler.h" />
     <ClInclude Include="Model.h" />
+    <ClInclude Include="Pathfinder.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
